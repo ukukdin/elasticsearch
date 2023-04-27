@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding= "UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+ 
+<mapper namespace="nurier.scraping.setting.dao.UserManagementSqlMapper">
+    
+    <sql id="UserColumn">
+          USER_ID           AS user_id
+        , USER_PASS         AS user_pass
+        , GROUP_CODE        AS group_code
+        , USER_NAME         AS user_name
+        , USER_GRADE        AS user_grade
+        , ID_USE_YN         AS id_use_yn
+        , USER_EMAIL        AS user_email
+        , USER_ACP_YN       AS user_acp_yn
+        , TEL               AS tel
+        , RGDATE            AS rgdate
+        , RGNAME            AS rgname
+        , MODDATE           AS moddate
+        , MODNAME           AS modname
+    </sql>
+
+    <sql id="UserIPColumn">
+          USER_ID           AS user_id
+        , USER_IP           AS user_ip
+    </sql>
+
+    <sql id="UserAndGroupColumn">
+          A.USER_ID           AS user_id
+        , A.USER_PASS         AS user_pass
+        , A.GROUP_CODE        AS group_code
+        , A.USER_NAME         AS user_name
+        , A.USER_GRADE        AS user_grade
+        , A.ID_USE_YN         AS id_use_yn
+        , A.USER_EMAIL        AS user_email
+        , A.USER_ACP_YN       AS user_acp_yn
+        , A.TEL               AS tel
+        , A.RGDATE            AS rgdate
+        , A.RGNAME            AS rgname
+        , A.MODDATE           AS moddate
+        , A.MODNAME           AS modname
+        , B.GROUP_NAME        AS group_name
+    </sql>
+    
+    <!-- 사용자 그룹 list 반환 -->
+    <select id="getListOfUsers" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        <include refid="paging.headerPagingStart"/>
+        SELECT 
+            A.USER_ID           AS USER_ID,
+            A.USER_NAME         AS USER_NAME,
+            A.GROUP_CODE        AS GROUP_CODE,
+            A.ID_USE_YN         AS ID_USE_YN,
+            A.TEL               AS TEL,
+            B.GROUP_NAME        AS GROUP_NAME
+        FROM
+            NFDS_USER A, NFDS_USER_GROUP B
+        WHERE 1=1
+        <if test="userId != null and userId != '' ">
+            AND A.USER_ID = #{userId}
+        </if>
+        <if test="userName != null and userName != '' ">
+            AND A.USER_NAME = #{userName}
+        </if>
+        <if test="groupCode != null and groupCode != '' ">
+            AND A.GROUP_CODE = #{groupCode}
+        </if>
+        <if test="isUsed != null and isUsed != '' ">
+            AND A.ID_USE_YN = #{isUsed}
+        </if>
+            AND A.GROUP_CODE = B.GROUP_CODE
+        ORDER BY A.RGDATE DESC
+        <include refid="paging.footerPagingEnd"/>
+    </select>
+    
+    <!-- 권한 그룹 list 반환 - SELECTBOX용 -->
+    <select id="getListOfUserGroups" resultType="java.util.HashMap">
+        SELECT
+            GROUP_CODE    AS GROUP_CODE,
+            GROUP_NAME    AS GROUP_NAME
+        FROM
+            NFDS_USER_GROUP
+        ORDER BY
+            TO_NUMBER(GROUP_CODE)
+    </select>
+    
+    <select id="getUserInfo" parameterType="String" resultType="java.util.HashMap">
+        SELECT
+            USER_ID      AS USER_ID,
+            USER_PASS    AS USER_PASS,
+            GROUP_CODE   AS GROUP_CODE,
+            USER_NAME    AS USER_NAME,
+            ID_USE_YN    AS ID_USE_YN,
+            USER_EMAIL   AS USER_EMAIL,
+            USER_ACP_YN  AS USER_ACP_YN,
+            TEL          AS TEL
+        FROM
+            NFDS_USER
+        WHERE
+            USER_ID = #{user_id}
+    </select>
+    
+    <select id="getUserFirstInfo" parameterType="string" resultType="string">
+        SELECT FIRSTLOGIN
+        FROM NFDS_USER
+        WHERE USER_ID = #{user_id}
+    </select>
+
+    <insert id="setUserInsert" parameterType="java.util.HashMap" >
+        INSERT INTO NFDS_USER (
+              USER_ID 
+            , USER_PASS
+            , GROUP_CODE
+            , USER_NAME
+            , USER_GRADE
+            , ID_USE_YN
+            , USER_EMAIL
+            , USER_ACP_YN
+            , TEL
+            , RGDATE
+            , RGNAME
+        ) VALUES ( 
+              #{user_id}
+            , #{user_pass}
+            , #{group_code}
+            , #{user_name}
+            , #{user_grade}
+            , #{id_use_yn}
+            , #{user_email}
+            , #{user_acp_yn}
+            , #{tel}
+            , SYSDATE
+            , #{rgname}
+        )
+    </insert>
+    
+    <update id="setUserFirstUpdate" parameterType="java.util.HashMap">
+        UPDATE NFDS_USER SET
+              USER_PASS     = #{user_pass}
+            , MODDATE       = SYSDATE
+            , FIRSTLOGIN    = 1
+        WHERE USER_ID = #{user_id}
+    </update>
+ 
+    <update id="setUserUpdate" parameterType="java.util.HashMap">
+        UPDATE NFDS_USER
+        <set>
+            <if test="user_pass != null and user_pass != '' ">
+             USER_PASS     = #{user_pass},
+            </if>
+            <if test="user_name != null and user_name != '' ">
+              USER_NAME     = #{user_name},
+            </if>
+            <if test="group_code != null and group_code != '' ">
+              GROUP_CODE    = #{group_code},
+            </if>
+            <if test="user_grade != null and user_grade != '' ">
+              USER_GRADE    = #{user_grade},
+            </if>
+            <if test="id_use_yn != null and id_use_yn != '' ">
+              ID_USE_YN     = #{id_use_yn},
+            </if>
+            <if test="user_email != null and user_email != ''">
+              USER_EMAIL    = #{user_email},
+            </if>
+            <if test="user_acp_yn != null and user_acp_yn != '' ">
+              USER_ACP_YN   = #{user_acp_yn},
+            </if>
+            <if test="tel != null and tel != ''">
+              TEL           = #{tel},
+            </if>
+              MODDATE       = SYSDATE ,
+            <if test="modname != null and modname != '' ">
+              MODNAME       = #{modname},
+            </if>
+        </set>
+        WHERE USER_ID = #{user_id}
+    </update>
+    
+    <select id="setUserLogInErrorInfo" resultType="java.util.HashMap">
+        SELECT ERROR_CNT, ERROR_TIME
+        FROM NFDS_USER
+        WHERE USER_ID = #{user_id}
+    </select>
+    
+    <update id="setUserLogInErrorUpdate" parameterType="java.util.HashMap">
+        UPDATE NFDS_USER SET
+              USER_IP     = #{user_ip}
+            , ERROR_CNT   = #{error_cnt}
+            , ERROR_TIME  = TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS')
+        WHERE USER_ID = #{user_id}
+    </update>
+    
+    <delete id="setUserDelete" parameterType="String">
+        DELETE NFDS_USER
+        WHERE USER_ID = #{user_id}
+    </delete>
+    
+    
+    <select id="getUserIPList" parameterType="String" resultType="java.util.HashMap">
+        SELECT
+            USER_ID   AS USER_ID,
+            USER_IP   AS USER_IP
+        FROM
+            NFDS_USER_IP
+        WHERE
+            USER_ID = #{user_id}
+    </select>
+    
+    <select id="getUserIPCheck" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT U.USER_ACP_YN, DECODE(I.USER_IP, null, '0', I.USER_IP) USER_IP
+        FROM NFDS_USER U LEFT JOIN NFDS_USER_IP I ON U.USER_ID = I.USER_ID AND I.USER_IP = #{user_ip}
+        WHERE U.USER_ID = #{user_id}
+    </select>
+
+    <insert id="setUserIPInsert" parameterType="java.util.HashMap" >
+        <selectKey resultType="String" keyProperty="seq_num" order="BEFORE">
+            SELECT NVL(MAX(SEQ_NUM),0)+1 as seq_num FROM NFDS_USER_IP
+        </selectKey>
+        INSERT INTO NFDS_USER_IP (
+              SEQ_NUM
+            , USER_ID
+            , USER_IP
+            , UPDATE_TIME
+        ) VALUES ( 
+              #{seq_num}
+            , #{user_id}
+            , #{user_ip}
+            , SYSDATE
+        )
+    </insert>
+
+    <delete id="setUserIPDelete" parameterType="String">
+        DELETE NFDS_USER_IP
+        WHERE USER_ID = #{user_id}
+    </delete>
+    
+    <select id="getDuplicationUserId" parameterType="String" resultType="int">
+        SELECT
+            COUNT(*)
+        FROM
+            NFDS_USER
+        WHERE
+            USER_ID = #{userId}
+    </select>
+    
+    <select id="getPersonInChargeName" parameterType="String" resultType="String">
+    	SELECT 
+    		USER_NAME
+    	FROM NFDS_USER
+    	WHERE USER_ID = #{user_id}
+    </select>
+</mapper>

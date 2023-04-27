@@ -1,0 +1,351 @@
+<?xml version="1.0" encoding= "UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+ 
+<mapper namespace="nurier.scraping.setting.dao.BlackListManagementSqlMapper">
+    
+    <!-- Black User list 반환 - scseo -->
+    <select id="getListOfBlackUsers" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        <include refid="paging.headerPagingStart"/>
+        SELECT
+            TO_CHAR(SEQ_NUM)   AS SEQ_NUM,
+            REGTYPE            AS REGISTRATION_TYPE,
+            USERID             AS REGISTRATION_DATA,
+            IPADDR             AS BEGINNING_IP_NUMBER,
+            MACADDR            AS END_IP_NUMBER,
+            HDDSN              AS FDS_DECISION_VALUE,
+            REMARK             AS REMARK,
+            USEYN              AS USEYN,
+            RGDATE             AS RGDATE,
+            RGNAME             AS RGNAME,
+            RGIPADDR           AS RGIPADDR,
+            MODDATE            AS MODDATE,
+            MODNAME            AS MODNAME,
+            SOURCE             AS SOURCE,
+            IS_FISS_SHARE      AS IS_FISS_SHARE,
+            IS_CARD_SHARE      AS IS_CARD_SHARE,
+            ACTIONTYPE         AS ACTIONTYPE,
+            TO_CHAR(FISS_SEQ_NUM) AS FISS_SEQ_NUM
+        FROM
+            NFDS_BLACK_USER
+        WHERE 1=1
+        <if test="REGISTRATION_TYPE != null and REGISTRATION_TYPE != '' ">
+            <![CDATA[
+            AND REGTYPE = #{REGISTRATION_TYPE}
+            ]]>
+        </if>
+        <if test="REGISTRATION_DATA != null and REGISTRATION_DATA != '' and REGISTRATION_TYPE != 'IPRANGE' ">
+            <![CDATA[
+            AND UPPER(USERID) LIKE UPPER(CONCAT('%',CONCAT(#{REGISTRATION_DATA},'%')))
+            ]]>
+        </if>
+        <if test="REGISTRATION_DATA != null and REGISTRATION_DATA != '' and REGISTRATION_TYPE == 'IPRANGE' and IP_NUMBER != null and IP_NUMBER != '' ">
+            <![CDATA[
+            AND TO_NUMBER(IPADDR) <= #{IP_NUMBER} AND #{IP_NUMBER} <= TO_NUMBER(MACADDR)
+            ]]>
+        </if>
+        <if test="FDS_DECISION_VALUE != null and FDS_DECISION_VALUE != '' ">
+            <![CDATA[
+            AND HDDSN = #{FDS_DECISION_VALUE}
+            ]]>
+        </if>
+        <if test="RGNAME != null and RGNAME != '' ">
+            <![CDATA[
+            AND RGNAME = #{RGNAME}
+            ]]>
+        </if>
+        <if test="USEYN != null and USEYN != '' ">
+            <![CDATA[
+            AND USEYN = #{USEYN}
+            ]]>
+        </if>
+        <if test="RGDATE != null and RGDATE != '' ">
+            <![CDATA[
+            AND RGDATE LIKE CONCAT(#{RGDATE},'%')
+            ]]>
+        </if>
+        <if test="SOURCE != null and SOURCE != '' ">
+            <![CDATA[
+            AND SOURCE = #{SOURCE}
+            ]]>
+        </if>
+        <if test="isSearchBankSource == 'NONSHARE' ">
+            AND (SOURCE = '0' OR SOURCE IS NULL)
+        </if>
+        <if test="IS_FISS_SHARE != null and IS_FISS_SHARE != '' and IS_FISS_SHARE != 'NONSHARE' ">
+            <![CDATA[
+            AND IS_FISS_SHARE = #{IS_FISS_SHARE}
+            ]]>
+        </if>
+        <if test="IS_FISS_SHARE == 'NONSHARE' ">
+            <![CDATA[
+            AND (IS_FISS_SHARE IS NULL OR IS_FISS_SHARE = 'N' OR IS_FISS_SHARE = '')
+            ]]>
+        </if>
+        <if test="IS_CARD_SHARE != null and IS_CARD_SHARE != '' and IS_CARD_SHARE != 'NONSHARE' ">
+            <![CDATA[
+            AND IS_CARD_SHARE = #{IS_CARD_SHARE}
+            ]]>
+        </if>
+        <if test="IS_CARD_SHARE == 'NONSHARE' ">
+            <![CDATA[
+            AND (IS_CARD_SHARE IS NULL OR IS_CARD_SHARE = 'N' OR IS_CARD_SHARE = '')
+            ]]>
+        </if>
+        <if test="isShareCode == 'NONSHARE'">
+            AND (IS_FISS_SHARE = 'N' OR IS_FISS_SHARE IS NULL) AND (IS_CARD_SHARE  = 'N' OR IS_CARD_SHARE IS NULL)
+        </if>
+        ORDER BY
+        <if test="REGISTRATION_TYPE != null and REGISTRATION_TYPE == 'IPRANGE' ">
+            IPADDR,
+        </if>
+        <if test="REGISTRATION_TYPE != null and REGISTRATION_TYPE != '' or REGISTRATION_DATA != null and REGISTRATION_DATA != '' ">
+            USERID,
+        </if>
+            RGDATE DESC
+        <include refid="paging.footerPagingEnd"/>
+    </select>
+    
+    
+    
+    <!-- 등록값에 의한 한 건의 Black User 반환 (중복확인용 - scseo) -->
+    <select id="getBlackUserByRegistrationData" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            TO_CHAR(SEQ_NUM)   AS SEQ_NUM,
+            REGTYPE            AS REGISTRATION_TYPE,
+            USERID             AS REGISTRATION_DATA,
+            IPADDR             AS BEGINNING_IP_NUMBER,
+            MACADDR            AS END_IP_NUMBER,
+            HDDSN              AS FDS_DECISION_VALUE,
+            REMARK             AS REMARK,
+            USEYN              AS USEYN,
+            RGDATE             AS RGDATE,
+            RGNAME             AS RGNAME,
+            RGIPADDR           AS RGIPADDR,
+            MODDATE            AS MODDATE,
+            MODNAME            AS MODNAME
+        FROM
+            NFDS_BLACK_USER
+        WHERE
+            <![CDATA[
+            REGTYPE = #{REGISTRATION_TYPE} AND UPPER(USERID) = UPPER(#{REGISTRATION_DATA})
+            ]]>
+    </select>
+    
+    
+    
+    <!-- 'IP대역'으로 등록시 기존에 저장되어있는 IP대역과 중복되는 구간들을 list 로 반환 (scseo) -->
+    <select id="getListOfIpAddressesDuplicated" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            TO_CHAR(SEQ_NUM)   AS SEQ_NUM,
+            USERID             AS RANGE_OF_IP_ADDRESS,
+            IPADDR             AS BEGINNING_IP_NUMBER,
+            MACADDR            AS END_IP_NUMBER,
+            HDDSN              AS FDS_DECISION_VALUE,
+            REMARK             AS REMARK,
+            USEYN              AS USEYN,
+            RGDATE             AS RGDATE,
+            RGNAME             AS RGNAME,
+            RGIPADDR           AS RGIPADDR,
+            MODDATE            AS MODDATE,
+            MODNAME            AS MODNAME
+        FROM
+            NFDS_BLACK_USER
+        WHERE
+        <![CDATA[
+            REGTYPE = #{REGISTRATION_TYPE} AND 
+            (
+                ( TO_NUMBER(IPADDR) <= #{BEGINNING_IP_NUMBER} AND #{BEGINNING_IP_NUMBER} <= TO_NUMBER(MACADDR) ) 
+                OR 
+                ( TO_NUMBER(IPADDR) <= #{END_IP_NUMBER}       AND #{END_IP_NUMBER}       <= TO_NUMBER(MACADDR) ) 
+                OR 
+                ( TO_NUMBER(IPADDR) <  #{BEGINNING_IP_NUMBER} AND #{END_IP_NUMBER}       <  TO_NUMBER(MACADDR) ) 
+                OR 
+                ( TO_NUMBER(IPADDR) >  #{BEGINNING_IP_NUMBER} AND #{END_IP_NUMBER}       >  TO_NUMBER(MACADDR) ) 
+            )
+        ]]>
+    </select>
+    
+    
+    
+    <!-- Black User 신규등록처리 -->
+    <insert id="registerBlackUser" parameterType="java.util.HashMap">
+    
+        <selectKey resultType="String" keyProperty="seq_num" order="BEFORE">
+            SELECT NVL(MAX(SEQ_NUM),0)+1 as seq_num FROM NFDS_BLACK_USER
+        </selectKey>
+        
+        <![CDATA[
+        INSERT INTO NFDS_BLACK_USER (
+            SEQ_NUM,
+            REGTYPE,
+            USERID,
+            IPADDR,
+            MACADDR,
+            HDDSN,
+            REMARK,
+            USEYN,
+            RGDATE,
+            RGNAME,
+            RGIPADDR,
+            SOURCE,
+            IS_FISS_SHARE,
+            IS_CARD_SHARE,
+            FISS_SEQ_NUM,
+            ACTIONTYPE
+        ) VALUES (
+            #{seq_num},
+            #{REGISTRATION_TYPE},
+            #{REGISTRATION_DATA},
+            #{BEGINNING_IP_NUMBER},
+            #{END_IP_NUMBER},
+            #{FDS_DECISION_VALUE},
+            #{REMARK},
+            #{USEYN},
+            TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'),
+            #{RGNAME},
+            #{RGIPADDR},
+            #{SOURCE},
+            #{IS_FISS_SHARE},
+            #{IS_CARD_SHARE},
+            #{FISS_SEQ_NUM},
+            #{ACTIONTYPE}
+        )
+        ]]>
+    </insert>
+    
+    
+    
+    <!-- 한 건의 Black User 반환 (수정처리용) -->
+    <select id="getBlackUser" parameterType="string" resultType="java.util.HashMap">
+        SELECT
+            TO_CHAR(SEQ_NUM)      AS SEQ_NUM,
+            REGTYPE               AS REGISTRATION_TYPE,
+            USERID                AS REGISTRATION_DATA,
+            IPADDR                AS BEGINNING_IP_NUMBER,
+            MACADDR               AS END_IP_NUMBER,
+            HDDSN                 AS FDS_DECISION_VALUE,
+            REMARK                AS REMARK,
+            USEYN                 AS USEYN,
+            RGDATE                AS RGDATE,
+            RGNAME                AS RGNAME,
+            RGIPADDR              AS RGIPADDR,
+            MODDATE               AS MODDATE,
+            MODNAME               AS MODNAME,
+            ACTIONTYPE            AS ACTIONTYPE,
+            TO_CHAR(FISS_SEQ_NUM) AS FISS_SEQ_NUM,
+            SOURCE                AS SOURCE
+        FROM
+            NFDS_BLACK_USER
+        WHERE 
+            SEQ_NUM = #{seqOfBlackUser}
+    </select>
+    
+    
+    
+    <!-- FDS Rule 수정처리 -->
+    <update id="editBlackUser" parameterType="java.util.HashMap">
+        <![CDATA[
+        UPDATE
+            NFDS_BLACK_USER
+        SET
+            HDDSN             = #{FDS_DECISION_VALUE},
+            REMARK            = #{REMARK},
+            USEYN             = #{USEYN},
+            RGIPADDR          = #{RGIPADDR},
+            MODDATE           = TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'),
+            MODNAME           = #{MODNAME}
+        WHERE
+            SEQ_NUM           = #{SEQ_NUM}
+        ]]>
+    </update>
+    
+    
+    
+    <!-- Black User 삭제처리 -->
+    <delete id="deleteBlackUser" parameterType="string">
+        DELETE FROM
+            NFDS_BLACK_USER
+        WHERE 
+            SEQ_NUM = #{seqOfBlackUser}
+    </delete>
+    
+    
+    
+    <select id="getNextSequenceNumber" resultType="string">
+        SELECT
+            NVL(MAX(SEQ_NUM), 0) + 1 AS NEXT_SEQ_NUM
+        FROM
+            NFDS_BLACK_USER
+    </select>
+    
+    
+    <!-- FDS Rule 수정처리 -->
+    <update id="editBlackUserForFiss" parameterType="java.util.HashMap">
+        <![CDATA[
+        UPDATE
+            NFDS_BLACK_USER
+        SET
+            IS_FISS_SHARE   = #{IS_FISS_SHARE},
+            FISS_SEQ_NUM    = TO_NUMBER(#{FISS_SEQ_NUM}),
+            ACTIONTYPE      = #{ACTIONTYPE},
+            REMARK          = #{REMARK},
+            MODDATE         = TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'),
+            MODNAME         = #{MODNAME}
+        WHERE
+            SEQ_NUM         = #{BLACKLIST_SEQ}
+        ]]>
+    </update>
+    
+    <update id="editBlackUserForNhCard" parameterType="java.util.HashMap">
+        <![CDATA[
+        UPDATE
+            NFDS_BLACK_USER
+        SET
+            IS_CARD_SHARE   = #{IS_CARD_SHARE},
+            MODDATE         = TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'),
+            MODNAME         = #{MODNAME}
+        WHERE
+            SEQ_NUM         = #{BLACKLIST_SEQ}
+        ]]>
+    </update>
+    
+    <!-- NH Card eFDs로 전체 데이터를 내보내기 위한 Select -->
+    <select id="getListOfNhCardExport" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            TO_CHAR(SEQ_NUM)   AS SEQ_NUM,
+            REGTYPE            AS REGISTRATION_TYPE,
+            USERID             AS REGISTRATION_DATA,
+            IPADDR             AS BEGINNING_IP_NUMBER,
+            MACADDR            AS END_IP_NUMBER,
+            HDDSN              AS FDS_DECISION_VALUE,
+            REMARK             AS REMARK,
+            USEYN              AS USEYN,
+            RGDATE             AS RGDATE,
+            RGNAME             AS RGNAME,
+            RGIPADDR           AS RGIPADDR,
+            MODDATE            AS MODDATE,
+            MODNAME            AS MODNAME,
+            SOURCE             AS SOURCE,
+            IS_FISS_SHARE      AS IS_FISS_SHARE,
+            IS_CARD_SHARE      AS IS_CARD_SHARE,
+            ACTIONTYPE         AS ACTIONTYPE,
+            TO_CHAR(FISS_SEQ_NUM) AS FISS_SEQ_NUM
+        FROM
+            NFDS_BLACK_USER
+        WHERE 1=1
+            AND HDDSN='B' 
+            AND ( REGTYPE  in ( 'pc_macAddr','MACADDR','MACADDR2','MACADDR3','IPADDR','pc_hddSerial','HDDSN','HDDSN2','HDDSN3' ) )
+        ORDER BY
+            RGDATE DESC
+    </select>
+    
+    
+    <select id="getFissSeqNum" resultType="string" parameterType="string">
+        SELECT
+            TO_CHAR(FISS_SEQ_NUM)   AS FISS_SEQ_NUM
+        FROM
+            NFDS_BLACK_USER
+        WHERE SEQ_NUM = #{seq_num}
+    </select>
+    
+</mapper>

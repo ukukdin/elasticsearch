@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding= "UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+
+<mapper namespace="com.nurier.web.nfds.setting.dao.QueryManagementSqlMappler">
+
+
+	<!-- 새로운 Query Head 등록 -->
+    <insert id="insertQueryHead" parameterType="queryVO">
+    
+        <![CDATA[
+        INSERT INTO NFDS_QUERY_HD (
+            SEQ_NUM,
+            NAME,
+            REPORT_NUM,
+            IS_USED,
+            RGNAME,
+            RGDATE
+        ) VALUES (
+            #{seq_num},
+            #{name},
+            #{report_num},
+            #{is_used},
+            #{rgname},
+            SYSDATE
+        )
+        ]]>
+    </insert>
+    
+    
+    <!-- 새로운 Query Detail 등록 -->
+    <insert id="insertQueryDetail" parameterType="queryVO">
+    
+        <selectKey resultType="String" keyProperty="seq_num" order="BEFORE">
+            SELECT NVL(MAX(SEQ_NUM),0)+1 AS SEQ_NUM FROM NFDS_QUERY_DT
+        </selectKey>
+        
+        <![CDATA[
+        INSERT INTO NFDS_QUERY_DT (
+            SEQ_NUM,
+            HEAD_NUM,
+            USE_MENU,
+            TYPE,
+            SUB_TYPE,
+            VALUE1,
+            VALUE2,
+            VALUE3,
+            VALUE4,
+            VALUE5,
+            VALUE6,
+            IS_USED,
+            RGNAME,
+            RGDATE
+        ) VALUES (
+            #{seq_num},
+            #{head_num},
+            #{use_menu},
+            #{type},
+            #{sub_type},
+            #{value1},
+            #{value2},
+            #{value3},
+            #{value4},
+            #{value5},
+            #{value6},
+            #{is_used},
+            #{rgname},
+            SYSDATE
+        )
+        ]]>
+    </insert>
+    
+    
+    <select id="getQueryDetailValue2" parameterType="queryVO" resultType="queryVO">
+        SELECT value2
+		  FROM nfds_query_dt
+		 WHERE head_num = #{seq_num}
+		   AND use_menu = 'R'
+		   AND type = 'FACET'
+	  ORDER BY seq_num 
+    </select>
+    
+    
+    <select id="getHeadSeqNum" resultType="String">
+        SELECT NVL(MAX(SEQ_NUM),0)+1 AS SEQ_NUM 
+          FROM NFDS_QUERY_HD
+    </select>
+    
+    <select id="getHeadTitle" resultType="java.util.HashMap">
+        SELECT seq_num, name 
+          FROM nfds_query_hd
+      ORDER BY name ASC
+    </select>
+    
+<!--     시뮬레이션 상세 리스트 -->
+    <select id="getDetailList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT 
+        	seq_num,
+        	head_num,
+        	type,
+        	sub_type,
+        	value1,
+        	value2,
+        	value3,
+        	value4,
+        	value5,
+        	value6,
+        	is_used
+        FROM NFDS_QUERY_DT
+        WHERE HEAD_NUM = #{head_num}
+        <if test="use_menu != null and use_menu != '' ">
+        AND USE_MENU = #{use_menu}
+        </if>
+        ORDER BY seq_num
+    </select>
+    
+    
+    <select id="getSeqCheck" parameterType="String" resultType="String">
+        SELECT seq_num from NFDS_QUERY_HD
+         WHERE seq_num = #{seq_num}
+    </select>
+    
+    <delete id="setDetailDelete" parameterType="java.util.HashMap">
+        DELETE NFDS_QUERY_DT
+         WHERE HEAD_NUM = #{seq_num}
+           AND USE_MENU = #{use_menu}
+    </delete>
+    
+    <delete id="setHeadDelete" parameterType="String">
+        DELETE NFDS_QUERY_HD
+         WHERE SEQ_NUM = #{seq_num}
+    </delete>
+    
+    <update id="setHeadUpdate" parameterType="java.util.HashMap">
+        UPDATE NFDS_QUERY_HD 
+           SET NAME = #{name}
+         WHERE SEQ_NUM = #{seq_num}
+    </update>
+    
+    <select id="getFieldBookmarkSeqNum" resultType="String">
+		SELECT NVL(MAX(SEQ_NUM),0)+1 AS SEQ_NUM 
+		  FROM NFDS_QUERY_FIELD_BOOKMARK_HD
+    </select>
+    
+    <insert id="setFieldBookmarkHd" parameterType="java.util.HashMap">
+        INSERT INTO NFDS_QUERY_FIELD_BOOKMARK_HD (
+            SEQ_NUM,
+            NAME,
+            RGNAME,
+            RGDATE
+        ) VALUES (
+            #{seq_num},
+            #{name},
+            #{rgname},
+            SYSDATE
+        )
+    </insert>
+    
+    <insert id="setFieldBookmarkDt" parameterType="java.util.HashMap">
+		<selectKey resultType="String" keyProperty="seq_num" order="BEFORE">
+			SELECT NVL(MAX(SEQ_NUM),0)+1 AS SEQ_NUM FROM NFDS_QUERY_FIELD_BOOKMARK_DT
+		</selectKey>
+		<![CDATA[
+        INSERT INTO NFDS_QUERY_FIELD_BOOKMARK_DT (
+            SEQ_NUM,
+            HEAD_NUM,
+            VALUE,
+            RGNAME,
+            RGDATE
+        ) VALUES (
+            #{seq_num},
+            #{head_num},
+            #{value},
+            #{rgname},
+            SYSDATE
+        )
+    	]]>
+    </insert>
+    
+    <update id="updateFieldBookmarkHd" parameterType="java.util.HashMap">
+		UPDATE NFDS_QUERY_FIELD_BOOKMARK_HD 
+		   SET NAME = #{name}
+		 WHERE SEQ_NUM = #{seq_num}
+    </update>
+    
+    <select id="getFieldBookmarkHdList" resultType="java.util.HashMap">
+		 SELECT SEQ_NUM as seq_num,
+		        NAME as name
+		   FROM NFDS_QUERY_FIELD_BOOKMARK_HD
+		  ORDER BY SEQ_NUM
+    </select>
+    
+    <select id="getFieldBookmarkDt" parameterType="String" resultType="java.util.HashMap">
+		 SELECT SEQ_NUM as seq_num,
+		        HEAD_NUM as head_num,
+		        VALUE as value
+		   FROM NFDS_QUERY_FIELD_BOOKMARK_DT
+		  WHERE HEAD_NUM = #{head_num}
+    </select>
+    
+    <delete id="deleteFieldBookmarkHd" parameterType="String">
+		DELETE NFDS_QUERY_FIELD_BOOKMARK_HD
+		 WHERE SEQ_NUM = #{head_num}
+    </delete>
+    
+    <delete id="deleteFieldBookmarkDt" parameterType="String">
+		DELETE NFDS_QUERY_FIELD_BOOKMARK_DT
+		 WHERE HEAD_NUM = #{head_num}
+    </delete>
+    
+    <select id="getSelectQueryHd" parameterType="String" resultType="java.util.HashMap">
+	   SELECT A.SEQ_NUM as seq_num,
+		        A.NAME as name,
+		        A.USE_MENU as use_menu
+		   FROM ( SELECT SEQ_NUM,
+		                 NAME,
+		                 'Q' AS USE_MENU
+		            FROM NFDS_QUERY_HD
+		           UNION ALL
+		          SELECT SEQ_NUM,
+		                 NAME,
+		                 'R' AS USE_MENU
+		            FROM NFDS_REPORT) A,
+		        ( SELECT DISTINCT HEAD_NUM,
+		                  USE_MENU
+		             FROM NFDS_QUERY_DT) B
+		  WHERE A.USE_MENU = #{queryReport}
+		    AND A.SEQ_NUM = B.HEAD_NUM
+		    AND A.USE_MENU = B.USE_MENU
+		  ORDER BY SEQ_NUM
+    </select>
+    
+    <delete id="deleteChartInfo" parameterType="java.util.HashMap">
+		 DELETE
+		   FROM NFDS_CHART_INFO
+		  WHERE HEAD_NUM = #{seq_num}
+		    AND USE_MENU= #{use_menu}
+    </delete>
+</mapper>
+

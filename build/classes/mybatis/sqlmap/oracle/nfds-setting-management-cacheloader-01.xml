@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding= "UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+ 
+<mapper namespace="nurier.scraping.setting.dao.CacheLoaderSqlMapper">
+
+    <!-- RemoteBlackList record 총 수 -->
+    <select id="getTotalNumberOfRecordsOfRemoteProgram" resultType="long">
+        SELECT
+            COUNT(OID)
+        FROM 
+            NFDS_REMOTE_BLACKLIST
+    </select>
+    
+    
+    <!-- 국가별IP중 KR IP 총 수 -->
+    <select id="getTotalNumberOfRecordsOfKrIpInGlobalIp" resultType="long">
+        SELECT
+            COUNT(OUID)
+        FROM
+            NFDS_GLOBAL_IP
+        WHERE
+            COUNTRYCODE = 'KR'
+    </select>
+    
+    
+    <!-- RemoteBlackList 전체 레코드 반환 -->
+    <select id="getListOfRemotePrograms" resultType="java.util.HashMap">
+        SELECT
+            TO_CHAR(OID)  AS OID,
+            PGMNAM        AS PGMNAM,
+            PROCESNAM     AS PROCESNAM,
+            LOCALPORT     AS LOCALPORT,
+            REMOTPORT     AS REMOTPORT,
+            REMARK        AS REMARK,
+            CREATEDATE    AS CREATEDATE,
+            CREATEUSER    AS CREATEUSER,
+            RGIPADDR      AS RGIPADDR
+        FROM
+            NFDS_REMOTE_BLACKLIST
+    </select>
+    
+    
+    <!-- 국가별IP중 KR IP 레코드 반환 -->
+    <select id="getListOfKrIpAddresses" resultType="java.util.HashMap">
+        SELECT
+            TO_CHAR(OUID)  AS OUID,
+            IPFROM         AS IPFROM,
+            IPTO           AS IPTO,
+            LONGFROM       AS LONGFROM,
+            LONGTO         AS LONGTO,
+            COUNTRYCODE    AS COUNTRYCODE,
+            COUNTRYNAME    AS COUNTRYNAME,
+            CREATEDATE     AS CREATEDATE
+        FROM
+            NFDS_GLOBAL_IP
+        WHERE
+            COUNTRYCODE = 'KR'
+    </select>
+    
+    
+    <!-- Black User record 총 수 -->
+    <select id="getTotalNumberOfRecordsOfBlackUserActivated" resultType="long">
+        SELECT
+            COUNT(SEQ_NUM)
+        FROM 
+            NFDS_BLACK_USER
+        WHERE
+            USEYN = 'Y'
+    </select>
+    
+    
+    <!-- FDS rule record 총 수 -->
+    <select id="getTotalNumberOfRecordsOfFdsRuleActivated"   resultType="long">
+        SELECT
+            COUNT(SEQ_NUM)
+        FROM 
+            NFDS_RULE_SET
+        WHERE
+            TYPE = '4'
+    </select>
+    
+    
+    <!-- 사용중인 Black User 전체 레코드 반환 -->
+    <select id="getListOfBlackUsersActivated" resultType="java.util.HashMap">
+        SELECT
+            TO_CHAR(SEQ_NUM)   AS SEQ_NUM,
+            REGTYPE            AS REGISTRATION_TYPE,
+            USERID             AS REGISTRATION_DATA,
+            IPADDR             AS BEGINNING_IP_NUMBER,
+            MACADDR            AS END_IP_NUMBER,
+            HDDSN              AS FDS_DECISION_VALUE,
+            REMARK             AS REMARK,
+            USEYN              AS USEYN,
+            RGDATE             AS RGDATE,
+            RGNAME             AS RGNAME,
+            RGIPADDR           AS RGIPADDR,
+            MODDATE            AS MODDATE,
+            MODNAME            AS MODNAME
+        FROM
+            NFDS_BLACK_USER
+        WHERE
+            USEYN = 'Y'
+    </select>
+    
+    
+    <!-- 사용중인 FDS Rule 전체 레코드 반환 -->
+    <select id="getListOfFdsRulesActivated" resultType="RuleScorePolicyVO">
+        SELECT
+            RULE_ID              AS RULE_ID,
+            PROCESSOR_NAME       AS PROCESSOR_NAME,
+            SCRIPT               AS SCRIPT,
+            RULE_GROUP           AS RULE_GROUP,
+            IS_USED              AS IS_USED,
+            RGDATE               As RGDATE,
+            RGNAME               As RGNAME,
+            MODDATE              As MODDATE,
+            MODNAME              As MODNAME
+        FROM
+            NFDS_RULE_SET
+        WHERE
+            TYPE = '4'
+        AND IS_USED = 'Y'
+    </select>
+
+
+    <!-- Statistics rule record 총 수 -->
+    <select id="getTotalNumberOfRecordsOfStatisticsRule"   resultType="long">
+        SELECT
+            COUNT(SEQ_NUM)
+        FROM 
+            NFDS_STATISTICS_DATA
+        WHERE
+            TYPE = '3'
+    </select>
+
+
+    <!-- Statistics rule 전체 레코드 반환 -->
+    <select id="getListOfStatisticsRule" resultType="StatisticsDataVO">
+        SELECT
+            TYPE            AS TYPE,
+            NAME            AS NAME,
+            REMARK          AS REMARK,
+            SCRIPT          AS SCRIPT,
+            REFERENCE1      AS REFERENCE1,
+            REFERENCE2      AS REFERENCE2,
+            RGDATE          AS RGDATE,
+            RGNAME          AS RGNAME,
+            MODDATE         As MODDATE,
+            MODNAME         As MODNAME
+        FROM
+            NFDS_STATISTICS_DATA
+        WHERE
+            TYPE = '3'
+    </select>
+
+    <!-- 룰/스코어 위치에 따른 리스트 갯수 -->
+    <select id="getRuleScoreManagementQueryCount" resultType="java.util.HashMap">
+        SELECT DISTINCT
+            (select count(*) from NFDS_RULE_SET where type=4 and is_used = 'Y' and processor_name = 'RuleProcessor_Login_Common') as  A,
+            (select count(*) from NFDS_RULE_SET where type=4 and is_used = 'Y' and processor_name = 'RuleProcessor_Login_eBank') as  B,
+            (select count(*) from NFDS_RULE_SET where type=4 and is_used = 'Y' and processor_name = 'RuleProcessor_Login_Smart') as  C,
+            (select count(*) from NFDS_RULE_SET where type=4 and is_used = 'Y' and processor_name = 'RuleProcessor_Login_Tele') as  D,
+            (select count(*) from NFDS_RULE_SET where type=4 and is_used = 'Y' and processor_name = 'RuleProcessor_Transfer_Common') as  E,
+            (select count(*) from NFDS_RULE_SET where type=4 and is_used = 'Y' and processor_name = 'RuleProcessor_Transfer_eBank') as  F,
+            (select count(*) from NFDS_RULE_SET where type=4 and is_used = 'Y' and processor_name = 'RuleProcessor_Transfer_Smart') as  G,
+            (select count(*) from NFDS_RULE_SET where type=4 and is_used = 'Y' and processor_name = 'RuleProcessor_Transfer_Tele') as  H,
+            (select count(*) from NFDS_RULE_SET where type=4 and is_used = 'Y' and processor_name = 'RuleProcessor_TransferCheck_Common') as  I,
+            (select count(*) from NFDS_RULE_SET where type=4 and is_used = 'Y' and processor_name = 'RuleProcessor_TransferCheck_eBank') as  J,
+            (select count(*) from NFDS_RULE_SET where type=4 and is_used = 'Y' and processor_name = 'RuleProcessor_TransferCheck_Smart') as  K,
+            (select count(*) from NFDS_RULE_SET where type=4 and is_used = 'Y' and processor_name = 'RuleProcessor_TransferCheck_Tele') as  L,
+            (select count(*) from NFDS_RULE_SET where type=4 and is_used = 'Y' and processor_name = 'RuleProcessor_Information') as  M
+        FROM NFDS_RULE_SET
+        WHERE type = 4
+    </select>
+    
+    <!-- 원격프로그램 예외관리 리스트 갯수 -->
+    <select id="getRemoteProgramExceptionListQueryCount" resultType="long">
+        SELECT count(distinct(USERID))
+        FROM NFDS_REMOTE_BLACK_EXCEPTED A INNER JOIN NFDS_REMOTE_BLACKLIST B ON A.REMOTE_PROGRAM_ID = B.OID
+    </select>
+    
+    <!-- 원격프로그램 예외관리 리스트 반환 -->
+    <select id="getRemoteProgramExceptionList" resultType="java.util.HashMap">
+        SELECT distinct(USERID)
+        FROM NFDS_REMOTE_BLACK_EXCEPTED A INNER JOIN NFDS_REMOTE_BLACKLIST B ON A.REMOTE_PROGRAM_ID = B.OID
+    </select>
+
+    <!-- 원격프로그램 예외관리 Coherence input Data -->
+    <select id="getRemoteProgramExceptionCoherenceData" parameterType="String" resultType="java.util.HashMap">
+        SELECT B.PROCESNAM, B.LOCALPORT
+        FROM NFDS_REMOTE_BLACK_EXCEPTED A INNER JOIN NFDS_REMOTE_BLACKLIST B ON A.REMOTE_PROGRAM_ID = B.OID
+        WHERE A.USERID = #{USERID}
+    </select>
+</mapper>

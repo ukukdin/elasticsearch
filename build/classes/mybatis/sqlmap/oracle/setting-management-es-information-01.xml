@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding= "UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+ 
+<mapper namespace="nurier.scraping.setting.dao.EsManagementSqlMapper">  
+
+    
+    <!-- 리스트 -->
+    <select id="getEsList" resultType="java.util.HashMap">
+	SELECT rank() over(order by WK_DTM DESC) ranking
+		 , table_name AS ClusterName
+		 , trf_bas_dt
+		 , TABLE_KNAME AS NodeInfo
+		 , TO_CHAR(WK_DTM, 'YYYY-MM-DD HH24:MI:SS') AS WK_DTM
+ 		 , TO_CHAR(LSCHG_DTM, 'YYYY-MM-DD HH24:MI:SS') AS LSCHG_DTM
+ 		 , ILM_USE_YN 
+	  FROM TB_EF_SO_ILM_AMN 
+  	 WHERE ILM_USE_YN in('1','0') 
+  	 ORDER by ILM_USE_YN DESC
+    </select>
+    
+    
+    <select id="getExceptionOfEsList" resultType="java.util.HashMap">
+	SELECT rank() over(order by WK_DTM DESC) ranking
+		 , table_name AS ClusterName
+		 , trf_bas_dt
+		 , TABLE_KNAME AS NodeInfo
+		 , TO_CHAR(WK_DTM, 'YYYY-MM-DD HH24:MI:SS') AS WK_DTM
+ 		 , TO_CHAR(LSCHG_DTM, 'YYYY-MM-DD HH24:MI:SS') AS LSCHG_DTM
+ 		 , ILM_USE_YN 
+	  FROM TB_EF_SO_ILM_AMN 
+  	 WHERE ILM_USE_YN = '1' 
+  	 ORDER by ILM_USE_YN DESC
+    </select>
+    
+    <select id="getEsSvr" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+	SELECT rank() over(order by WK_DTM DESC) ranking
+		 , table_name AS ClusterName
+		 , trf_bas_dt
+		 , TABLE_KNAME AS NodeInfo
+		 , TO_CHAR(WK_DTM, 'YYYY-MM-DD HH24:MI:SS') AS WK_DTM
+ 		 , TO_CHAR(LSCHG_DTM, 'YYYY-MM-DD HH24:MI:SS') AS LSCHG_DTM
+ 		 , ILM_USE_YN 
+	  FROM TB_EF_SO_ILM_AMN 
+  	 WHERE ILM_USE_YN in('1','0')
+  	 		and
+	        TABLE_NAME = #{clusterName}
+            and
+            TABLE_KNAME = #{serverInfo}
+  	 ORDER by ILM_USE_YN DESC
+    </select>
+    
+    <select id="getList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+	SELECT rank() over(order by WK_DTM DESC) ranking
+		 , table_name AS ClusterName
+		 , trf_bas_dt
+		 , TABLE_KNAME AS NodeInfo
+ 		 , TO_CHAR(WK_DTM, 'YYYY-MM-DD HH24:MI:SS') AS WK_DTM
+ 		 , TO_CHAR(LSCHG_DTM, 'YYYY-MM-DD HH24:MI:SS') AS LSCHG_DTM 
+	  FROM TB_EF_SO_ILM_AMN 
+  	 WHERE ILM_USE_YN ='1' 
+	   AND (
+	   		TO_DATE(TO_NUMBER(#{fromDateTime}), 'YYYYMMDDHH24MISS') BETWEEN WK_DTM AND LSCHG_DTM
+	     	OR TO_DATE(TO_NUMBER(#{toDateTime}), 'YYYYMMDDHH24MISS') BETWEEN WK_DTM AND LSCHG_DTM
+	     	)	
+    </select>
+    
+    <select id="getCountEsSvr" parameterType="java.util.HashMap" resultType="Integer">
+		select count(*) as CNT from tb_ef_so_ilm_amn where table_name=#{clusterName}
+    </select>
+
+    <select id="getCountDate" parameterType="java.util.HashMap" resultType="Integer">
+    <![CDATA[
+		SELECT count(*) as CNT 
+          FROM tb_ef_so_ilm_amn 
+   		 WHERE (
+   		 		( WK_DTM <= TO_DATE(TO_NUMBER(#{startDateTime}), 'YYYYMMDDHH24MISS')   AND TO_DATE(TO_NUMBER(#{startDateTime}), 'YYYYMMDDHH24MISS') <= LSCHG_DTM ) 
+				OR 
+				( WK_DTM <= TO_DATE(TO_NUMBER(#{endDateTime}), 'YYYYMMDDHH24MISS')   AND TO_DATE(TO_NUMBER(#{endDateTime}), 'YYYYMMDDHH24MISS') <= LSCHG_DTM ) 
+				OR 
+				( WK_DTM <  TO_DATE(TO_NUMBER(#{startDateTime}), 'YYYYMMDDHH24MISS')   AND TO_DATE(TO_NUMBER(#{endDateTime}), 'YYYYMMDDHH24MISS') <  LSCHG_DTM ) 
+				OR 
+				( WK_DTM >  TO_DATE(TO_NUMBER(#{startDateTime}), 'YYYYMMDDHH24MISS')   AND TO_DATE(TO_NUMBER(#{endDateTime}), 'YYYYMMDDHH24MISS') >  LSCHG_DTM ) 
+   		 		) 
+   		   AND ilm_use_yn in ('1','0')
+   		   AND TABLE_NAME != #{clusterName}
+   	]]>
+    </select>
+    
+    
+	<insert id="registerEsSvr" parameterType="java.util.HashMap">
+	INSERT INTO tb_ef_so_ilm_amn (
+	            ILM_USE_YN,
+	            TABLE_NAME,
+	            TABLE_KNAME,
+	            TRF_BAS_DT,
+	            WK_DTM,
+	            LSCHG_DTM,
+	            LS_CMENO
+	        ) VALUES (
+	            #{use_yn},												<!-- 사용유무 -->
+	            #{clusterName},											<!-- 클러스터명 -->
+	            #{serverInfo},											<!-- 클러스터 정보 -->
+	            #{trf_bas_dt},											<!-- 기준일 -->
+	            to_date(#{startDateTime}, 'YYYYMMDDHH24MISS'),			<!-- 저장범위 START -->
+	            to_date(#{endDateTime}, 'YYYYMMDDHH24MISS'),			<!-- 저장범위 END -->
+	            #{userId}												<!-- 등록자 -->
+	        )
+	</insert>
+	
+	<delete id="deleteEsSvr" parameterType="java.util.HashMap">
+        DELETE FROM
+            tb_ef_so_ilm_amn
+        WHERE 
+            TABLE_NAME = #{clusterName}
+            and
+            TABLE_KNAME = #{serverInfo}
+    </delete>
+    
+    <update id="updateEsSvr" parameterType="java.util.HashMap">
+        UPDATE
+            tb_ef_so_ilm_amn
+        SET
+            ILM_USE_YN        = #{use_yn},
+            TABLE_NAME        = #{clusterName},
+            TABLE_KNAME		  = #{serverInfo},
+  		    WK_DTM			  = to_date(#{startDateTime}, 'YYYYMMDDHH24MISS'),
+        	LSCHG_DTM		  = to_date(#{endDateTime}, 'YYYYMMDDHH24MISS'),
+            LS_CMENO          = #{userId}
+        WHERE 
+            TABLE_NAME = #{originClusterName}
+            and
+            TABLE_KNAME = #{originServerInfo}
+    </update>
+    
+</mapper>

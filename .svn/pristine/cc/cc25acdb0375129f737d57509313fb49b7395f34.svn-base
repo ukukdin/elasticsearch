@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "HTTP://mybatis.org/dtd/mybatis-3-config.dtd">
+
+<configuration>
+    <typeAliases>
+        <typeAlias type="nurier.scraping.common.vo.ReportVO"             alias="reportVO"           />
+        <typeAlias type="nurier.scraping.common.vo.AuthGroupVO"          alias="authGroupVO"        />
+        <typeAlias type="nurier.scraping.common.vo.BlackUserVO"          alias="blackUserVO"        />
+        <typeAlias type="nurier.scraping.common.vo.UserAuthVO"           alias="userAuthVO"         />
+        <typeAlias type="nurier.scraping.common.vo.GlobalIpVO"           alias="globalIpVO"         />
+        <typeAlias type="nurier.scraping.common.vo.RemoteBlackVO"        alias="remoteBlackVO"      />
+        <typeAlias type="nurier.scraping.common.vo.MenuDataVO"           alias="menuDataVO"         />
+        <typeAlias type="nurier.scraping.common.vo.GroupDataVO"          alias="groupDataVO"        />
+        <typeAlias type="nurier.scraping.common.vo.DashBoardDataVO"      alias="dashBoardDataVO"    />
+        <typeAlias type="nurier.scraping.common.vo.CodeDataVO"           alias="codeDataVO"         />
+        <typeAlias type="nurier.scraping.common.vo.QueryVO"              alias="queryVO"            />
+        <typeAlias type="nurier.scraping.common.vo.StatisticsDataVO"     alias="statisticsDataVO"   />
+        <typeAlias type="nurier.scraping.common.vo.RuleScorePolicyVO"    alias="ruleScorePolicyVO"  />
+    </typeAliases>
+
+
+
+    <mappers>
+        <mapper resource="mybatis/sqlmap/oracle/common-paging.xml"                                  />  <!-- Common  - Paging -->
+        <mapper resource="mybatis/sqlmap/oracle/nfds-search-telegram-01.xml"                             />  <!-- search - 전문원본검색 -->
+        <mapper resource="mybatis/sqlmap/oracle/nfds-setting-management-black-information-01.xml"   />  <!-- 정보공유 블랙리스트 -->
+        <mapper resource="mybatis/sqlmap/oracle/nfds-setting-management-black-user-01.xml"          />  <!-- 블랙리스트관리 (NewVersion) -->
+        <mapper resource="mybatis/sqlmap/oracle/nfds-setting-management-remote-blacklist-01.xml"         />  <!-- 원격프로그램 관리 -->
+        <mapper resource="mybatis/sqlmap/oracle/rule-management-01.xml"                             />  <!-- 탐지 룰 관리 -->
+         <mapper resource="mybatis/sqlmap/oracle/nfds-setting-management-global-ip-01.xml"                />  <!-- 국가별 IP관리 -->
+        <mapper resource="mybatis/sqlmap/oracle/setting-management-user-group-01.xml"               />  <!-- User Group 관리용 -->
+        <mapper resource="mybatis/sqlmap/oracle/setting-management-user-01.xml"                     />  <!-- 사용자 관리용 -->
+        <mapper resource="mybatis/sqlmap/oracle/setting-management-menu-01.xml"                     />  <!-- 메뉴 관리용 -->
+        <mapper resource="mybatis/sqlmap/oracle/setting-management-code-01.xml"                     />  <!-- 설정 - 공통코드관리 -->
+        <mapper resource="mybatis/sqlmap/oracle/nfds-setting-management-white-user-01.xml"               />  <!-- 화이트리스트관리 (예외대상관리) -->
+        <mapper resource="mybatis/sqlmap/oracle/setting-management-es-information-01.xml"           />  <!-- 설정 - Es 리스트 -->
+<!--        <mapper resource="mybatis/sqlmap/oracle/nfds-setting-management-code-01.xml"                     />  설정 - 공통코드관리
+ --><mapper resource="mybatis/sqlmap/oracle/nfds-setting-management-group-code-01.xml"></mapper>
+   	    <mapper resource="mybatis/sqlmap/oracle/nfds-setting-management-remote-program-exception-01.xml"           /> <!-- 설정 - 원격 프로그램 예외관리 -->
+  	   <mapper resource="mybatis/sqlmap/oracle/nfds-setting-management-cacheloader-01.xml"              />  <!-- 설정 - Coherence 에 Data upload 처리 -->
+    </mappers>
+</configuration>
+

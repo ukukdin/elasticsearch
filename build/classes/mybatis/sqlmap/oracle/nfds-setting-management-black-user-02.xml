@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding= "UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+ 
+<mapper namespace="nurier.scraping.setting.dao.SettingRuleDataManageSqlMapper">
+
+    <select id="getBlackUserList" parameterType="blackUserVO" resultType="blackUserVO">
+        SELECT *
+        FROM NFDS_BLACK_USER
+    </select>
+    
+    <select id="getBlackUserInfo" parameterType="blackUserVO" resultType="blackUserVO">
+        SELECT *
+        FROM NFDS_BLACK_USER
+        WHERE SEQ_NUM = #{seq_num}
+    </select>
+    
+    <insert id="setBlackUserInsert" parameterType="blackUserVO">
+        <selectKey resultType="String" keyProperty="seq_num" order="BEFORE">
+            SELECT NVL(MAX(SEQ_NUM),0)+1 as seq_num FROM NFDS_BLACK_USER
+        </selectKey>
+        INSERT INTO NFDS_BLACK_USER (
+            SEQ_NUM,
+            REGTYPE,
+            USERID,
+            IPADDR,
+            MACADDR,
+            HDDSN,
+            REMARK,
+            USEYN,
+            RGDATE,
+            RGNAME,
+            MODDATE,
+            MODNAME
+        ) VALUES (
+            #{seq_num},
+            #{regtype},
+            #{userid},
+            #{ipaddr},
+            #{macaddr},
+            #{hddsn},
+            #{remark},
+            #{useyn},
+            TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'),
+            #{rgname},
+            TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'),
+            #{modname}
+        )
+    </insert>
+
+    <update id="setBlackUserUpdate" parameterType="blackUserVO">
+        UPDATE NFDS_BLACK_USER 
+        <set>
+            <if test="regtype != null and regtype != '' ">
+              REGTYPE           = #{regtype},
+            </if>
+            <if test="userid != null and userid != '' ">
+              USERID            = #{userid},
+            </if>
+            <if test="ipaddr != null and ipaddr != '' ">
+              IPADDR            = #{ipaddr},
+            </if>
+            <if test="macaddr != null and macaddr != '' ">
+              MACADDR           = #{macaddr}, 
+            </if>
+            <if test="hddsn != null and hddsn != '' ">
+              HDDSN             = #{hddsn},
+            </if>
+            <if test="remark != null ">
+              REMARK            = #{remark},
+            </if>
+            <if test="useyn != null ">
+              USEYN             = #{useyn},
+            </if>
+              MODDATE           = TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'),
+            <if test="modname != null ">
+              MODNAME           = #{modname}
+            </if>
+        </set>
+        WHERE SEQ_NUM = #{seq_num2}
+    </update>
+    
+    <delete id="setBlackUserDelete" parameterType="blackUserVO">
+        DELETE FROM NFDS_BLACK_USER
+        WHERE SEQ_NUM = #{seq_num}
+    </delete>
+    
+</mapper>

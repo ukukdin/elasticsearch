@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding= "UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+ 
+<mapper namespace="nurier.scraping.setting.dao.GlobalIpManagementSqlMapper">
+    
+    <select id="getGlobalIpList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        <include refid="paging.headerPagingStart" />
+        SELECT 
+            TO_CHAR(OUID) AS seqOfGlobalIp,
+            IPFROM        AS fromIp,
+            IPTO          AS toIp,
+            LONGFROM      AS fromIpValue,
+            LONGTO        AS toIpValue,
+            COUNTRYCODE   AS countryCode,
+            COUNTRYNAME   AS countryName,
+            CREATEDATE    AS createDate
+        FROM
+            NFDS_GLOBAL_IP
+        WHERE 1=1
+        <if test="ipValue != null and ipValue != '' ">
+        <![CDATA[
+        AND TO_NUMBER(LONGFROM) <= #{ipValueNumber}
+        AND TO_NUMBER(LONGTO)   >= #{ipValueNumber}
+        ]]>
+        </if>
+        <if test="countryCode != null and countryCode != '' ">
+        AND COUNTRYCODE = #{countryCode}
+        </if>
+        <if test="countryName != null and countryName != '' ">
+        AND COUNTRYNAME = #{countryName}
+        </if>
+        ORDER BY
+            CREATEDATE DESC
+        <include refid="paging.footerPagingEnd" />
+    </select>
+    
+    <select id="getGlobalIpCheckDuplicationList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <![CDATA[
+        SELECT 
+            TO_CHAR(OUID) AS seqOfGlobalIp,
+            IPFROM        AS fromIp,
+            IPTO          AS toIp,
+            LONGFROM      AS fromIpValue,
+            LONGTO        AS toIpValue,
+            COUNTRYCODE   AS countryCode,
+            COUNTRYNAME   AS countryName,
+            CREATEDATE    AS createDate
+        FROM
+            NFDS_GLOBAL_IP
+        WHERE ( TO_NUMBER(LONGFROM) <= #{fromIpValue} AND TO_NUMBER(LONGTO) >= #{fromIpValue} )
+           OR ( TO_NUMBER(LONGFROM) <= #{toIpValue}   AND TO_NUMBER(LONGTO) >= #{toIpValue}   )
+           OR ( TO_NUMBER(LONGFROM) <= #{fromIpValue} AND TO_NUMBER(LONGTO) >= #{toIpValue}   )
+           OR ( TO_NUMBER(LONGFROM) >= #{fromIpValue} AND TO_NUMBER(LONGTO) <= #{toIpValue}   )
+    ]]>
+    </select>
+    
+    <select id="getGlobalIp" parameterType="String" resultType="java.util.HashMap">
+        SELECT
+            TO_CHAR(OUID) AS seqOfGlobalIp,
+            IPFROM        AS fromIp,
+            IPTO          AS toIp,
+            LONGFROM      AS fromIpValue,
+            LONGTO        AS toIpValue,
+            COUNTRYCODE   AS countryCode,
+            COUNTRYNAME   AS countryName,
+            CREATEDATE    AS createDate
+        FROM 
+            NFDS_GLOBAL_IP
+        WHERE
+            OUID = #{seqOfGlobalIp}
+    </select>
+    
+    <insert id="setGlobalIpInsert" parameterType="java.util.HashMap">
+        INSERT INTO NFDS_GLOBAL_IP (
+            OUID,
+            IPFROM,
+            IPTO,
+            LONGFROM,
+            LONGTO,
+            COUNTRYCODE,
+            COUNTRYNAME,
+            CREATEDATE
+        ) VALUES (
+            #{ouid},
+            #{fromIp},
+            #{toIp},
+            #{fromIpValue},
+            #{toIpValue},
+            #{countryCode},
+            #{countryName},
+            TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS')
+            
+        )
+    </insert>
+    
+    <update id="setGlobalIpUpdate" parameterType="java.util.HashMap">
+        UPDATE NFDS_GLOBAL_IP SET
+            IPFROM      = #{fromIp},
+            IPTO        = #{toIp},
+            LONGFROM    = #{fromIpValue},
+            LONGTO      = #{toIpValue},
+            COUNTRYCODE = #{countryCode},
+            COUNTRYNAME = #{countryName},
+            CREATEDATE  = TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS')
+        WHERE
+            OUID = #{ouid}
+    </update>
+    
+    <delete id="setGlobalIpDelete" parameterType="String">
+        DELETE FROM
+           NFDS_GLOBAL_IP
+        WHERE
+           OUID = #{seqOfGlobalIp}
+    </delete>
+    
+    <delete id="setGlobalIpAllDelete" parameterType="String">
+        DELETE FROM
+            NFDS_GLOBAL_IP
+    </delete>
+    
+    <select id="getNextSequenceNumber" resultType="string">
+        SELECT
+            NVL(MAX(OUID),0)+1 AS seq_num
+        FROM
+            NFDS_GLOBAL_IP
+    </select>
+</mapper>

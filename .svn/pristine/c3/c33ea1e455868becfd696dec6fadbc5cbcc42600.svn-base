@@ -1,0 +1,33 @@
+##############################
+# \ub2e4\uad6d\uc5b4 \uc6a9 (\uad6d\ubb38)           #
+##############################
+
+#UI Common  resource#
+button.search=\uac80\uc0c9
+button.use=\uc0ac\uc6a9
+button.notUsed=\uc0ac\uc6a9\uc911\uc9c0
+button.inquire=\uc870\ud68c
+button.update=\uc218\uc815
+button.create=\ub4f1\ub85d
+button.delete=\uc0ad\uc81c
+button.deleteDatabase=\uc644\uc804\uc0ad\uc81c
+button.close=\ub2eb\uae30
+button.save=\uc800\uc7a5
+button.list=\ubaa9\ub85d
+button.reset=\ucde8\uc18c
+button.passwordUpdate=\uc554\ud638\ubcc0\uacbd
+button.subscribe=\uac00\uc785\uc2e0\uccad
+button.realname=\uc2e4\uba85\ud655\uc778
+button.moveToGpin=GPIN\uc2e4\uba85\ud655\uc778\uc73c\ub85c \uc774\ub3d9
+button.moveToIhidnum=\uc8fc\ubbfc\ub4f1\ub85d\ubc88\ud638 \uc2e4\uba85\ud655\uc778\uc73c\ub85c \uc774\ub3d9
+button.agree=\ub3d9\uc758
+button.disagree=\ube44\ub3d9\uc758
+button.possible = \uac00\ub2a5
+button.impossible = \ubd88\uac00\ub2a5
+button.qnaregist=Q&A\ub4f1\ub85d
+button.cnsltregist=\uc0c1\ub2f4\ub4f1\ub85d
+button.preview=\ubbf8\ub9ac\ubcf4\uae30
+button.next=\ub2e4\uc74c
+button.add=\ubc14\ub85c\ucd94\uac00
+button.confirm=\ud655\uc778
+

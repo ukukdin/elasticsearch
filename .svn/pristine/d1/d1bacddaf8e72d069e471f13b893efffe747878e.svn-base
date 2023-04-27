@@ -1,0 +1,421 @@
+<?xml version="1.0" encoding= "UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+
+<mapper
+	namespace="com.nurier.web.member.project.dao.ProjectManagementSqlMapper">
+
+	<sql id="ProjectColumn">
+		P_CODE as p_code,
+		P_SUBJECT as p_subject,
+		P_INCHARGE as p_incharge,
+		PRODUCT_CODE as product_code,
+		CUSTOMER_CODE as customer_code,
+		P_CONT_DATE as p_cont_date,
+		P_CONTS as p_conts,
+		P_CONTE as p_conte,
+		P_REMARKS as p_remarks,
+		P_WRITER as p_writer,
+		P_REG_DATE as p_reg_date
+	</sql>
+
+	<!-- 프로젝트 등록 -->
+	<insert id="setProjectInsert" parameterType="java.util.HashMap">
+		<selectKey resultType="String" keyProperty="seq_num" order="BEFORE">
+            SELECT NVL(MAX(P_CODE),0)+1 as seq_num FROM HR_MEMBER_PROJECT
+        </selectKey>
+		INSERT INTO HR_MEMBER_PROJECT (
+		P_CODE
+		, P_SUBJECT
+		, P_INCHARGE
+		, PRODUCT_CODE
+		, CUSTOMER_CODE
+		, P_CONT_DATE
+		, P_CONTS
+		, P_CONTE
+		, P_REMARKS
+		, P_WRITER
+		, P_REG_DATE
+		) VALUES (
+		  #{seq_num}
+		, #{p_subject}
+		, #{p_incharge}
+		, #{product_code}
+		, #{customer_code}
+		, #{p_cont_date}
+		, #{p_conts}
+		, #{p_conte}
+		, #{p_remarks}
+		, #{p_writer}
+		, SYSDATE
+
+		)
+	</insert>
+
+	<!-- 현장대리인 -->
+	<select id="getUserInfo" resultType="java.util.HashMap">
+		SELECT TO_CHAR(MEMBER_CODE) AS MEMBER_CODE, MEMBER_NAME
+		FROM HR_MEMBER
+	</select>
+
+	<!-- 프로젝트 수정 -->
+	<select id="getProjectModiInfo" resultType="java.util.HashMap"
+		parameterType="String">
+		SELECT HR_MEMBER_PROJECT.* ,(SELECT MEMBER_NAME 
+					FROM HR_MEMBER m,HR_MEMBER_PROJECT p
+					WHERE
+					m.MEMBER_CODE=p.P_INCHARGE and p.P_CODE=#{p_code, jdbcType=VARCHAR}) AS MEM_NAME , TO_CHAR(HR_MEMBER_PROJECT.P_CODE) AS P_CODE
+		FROM HR_MEMBER_PROJECT
+		WHERE P_CODE = #{p_code, jdbcType=VARCHAR}
+	</select>
+
+	<update id="setProjectUpdate" parameterType="java.util.HashMap">
+		UPDATE HR_MEMBER_PROJECT
+		<set>
+			<if test="p_subject != null and p_subject != '' ">
+				P_SUBJECT = #{p_subject},
+			</if>
+			<if test="p_incharge != null and p_incharge != '' ">
+				P_INCHARGE = #{p_incharge},
+			</if>
+			<if test="product_code != null and product_code != '' ">
+				PRODUCT_CODE = #{product_code},
+			</if>
+			<if test="customer_code != null and customer_code != '' ">
+				CUSTOMER_CODE = #{customer_code},
+			</if>
+			<if test="p_cont_date != null and p_cont_date != '' ">
+				P_CONT_DATE = #{p_cont_date},
+			</if>
+			<if test="p_conts != null and p_conts != ''">
+				P_CONTS = #{p_conts},
+			</if>
+			<if test="p_conte != null and p_conte != '' ">
+				P_CONTE = #{p_conte},
+			</if>
+			<if test="p_remarks != null and p_remarks != ''">
+				P_REMARKS = #{p_remarks},
+			</if>
+		</set>
+		WHERE P_CODE = #{p_code}
+	</update>
+
+	<delete id="setProjectDelete" parameterType="String">
+		DELETE HR_MEMBER_PROJECT
+		WHERE p_code = #{p_code}
+	</delete>
+	
+	<select id="chkDelete" parameterType="String" resultType="Integer">
+		SELECT count(*) 
+		FROM  HR_MEMBER_PROJECTIN 
+		WHERE HR_MEMBER_PROJECTIN.P_CODE = #{p_code}
+	</select>
+	
+	<!-- 프로젝트 상세 조회 (인력) -->
+	<select id="getProjectInList" parameterType="String" resultType="java.util.HashMap">
+		SELECT I.*, M.*
+		FROM HR_MEMBER M, HR_MEMBER_PROJECTIN I 
+		WHERE I.P_CODE = #{p_code} AND I.MEMBER_ID = M.MEMBER_ID AND M.MEMBER_ID <![CDATA[ <> ]]>'TBD'
+	</select>
+	
+	<!-- 프로젝트 현황 -->
+	<select id="getProjectList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		<include refid="paging.headerPagingStart"/>
+		SELECT TO_CHAR(M.MEMBER_CODE) as MEMBER_CODE, M.MEMBER_NAME, P.P_CODE, P.P_SUBJECT, P.P_CONTS, P.P_CONTE, P.CUSTOMER_CODE
+    	FROM HR_MEMBER M, HR_MEMBER_PROJECT P
+    	WHERE M.MEMBER_CODE = P.P_INCHARGE 
+    	<if test="p_subject != null and p_subject !=''">
+    	AND P.P_SUBJECT LIKE'%'||#{p_subject}||'%'
+    	</if>
+    	<if test="member_code != null and member_code !=''">
+    	AND M.MEMBER_CODE = #{member_code}
+    	</if>
+    	<if test="startDate != null and startDate !=''">
+    	<![CDATA[
+		AND (P.P_CONTS <= #{startDate} AND P.P_CONTE BETWEEN #{startDate} AND #{endDate}
+      	OR P.P_CONTS >= #{startDate} AND P.P_CONTE <= #{endDate}
+      	OR P.P_CONTS BETWEEN #{startDate} AND #{endDate} AND P.P_CONTE >= #{endDate}
+     	OR P.P_CONTS <= #{startDate} AND P.P_CONTE >= #{endDate} )]]>
+    	</if>
+    	ORDER BY P.P_CODE DESC
+    	<include refid="paging.footerPagingEnd"/>
+	</select>
+	
+	<!-- 년도별 개인별 투입현황 이력 조회  -->
+	<select id="individualView" parameterType="java.util.HashMap"  resultType="java.util.HashMap">
+		SELECT M.MEMBER_NAME, M.RANK_CODE, M.DEPT_CODE,M.MEMBER_SCLASS,I.P_START,I.P_END 
+    	FROM HR_MEMBER M INNER JOIN HR_MEMBER_PROJECTIN I ON M.MEMBER_ID = I.MEMBER_ID
+        WHERE M.MEMBER_CODE = #{member_code} 
+        <![CDATA[AND (EXTRACT(YEAR FROM I.P_START)=#{year} OR EXTRACT (YEAR FROM I.P_END )=#{year})]]>
+	</select>
+	
+	<!-- 년도별 개인별 프로젝트 현황 조회 -->
+	<select id="individualYearlyProjectView" parameterType="java.util.HashMap"  resultType="java.util.HashMap">
+		SELECT I.MEMBER_ID,P.P_SUBJECT, M.RANK_CODE , I.P_START , I.P_END, P.CUSTOMER_CODE 
+    	FROM HR_MEMBER_PROJECT P , HR_MEMBER_PROJECTIN I, HR_MEMBER M
+    	WHERE I.MEMBER_ID = M.MEMBER_ID AND I.P_CODE = P.P_CODE AND M.MEMBER_CODE =#{member_code}  
+    	ORDER BY I.P_START DESC	
+	</select>
+	
+
+	<!-- 현장대리인 -->
+	<select id="getProjectIncharge" resultType="java.util.HashMap">
+		SELECT DISTINCT
+			TO_CHAR(M.MEMBER_CODE) AS MEMBER_CODE, M.MEMBER_NAME, M.MEMBER_ID
+		FROM
+			HR_MEMBER M
+		INNER JOIN
+			HR_MEMBER_PROJECT P
+		ON
+			M.MEMBER_CODE = P.P_INCHARGE
+		ORDER BY
+			M.MEMBER_CODE
+	</select>
+	
+	<!-- 프로젝트 파견관리 검색 프로젝트 코드 리스트 -->
+	<select id="getProjectInCode" parameterType="java.util.HashMap" resultType="java.util.HashMap" >
+		SELECT DISTINCT
+			TO_CHAR(I.P_CODE) AS P_CODE, P.P_SUBJECT
+		FROM
+			HR_MEMBER_PROJECTIN I, HR_MEMBER_PROJECT P
+		WHERE
+			I.P_CODE = P.P_CODE
+		<if test="projectName != null and projectName != ''">
+		AND
+			P.P_SUBJECT LIKE '%'||#{projectName}||'%'
+		</if>
+		<if test="projectIncharge != null and projectIncharge != '' and projectIncharge != 'NONE'">
+		AND
+			P.P_INCHARGE = #{projectIncharge}
+		</if>
+		<if test="productCode != null and productCode != ''">
+		AND
+			P.PRODUCT_CODE = #{productCode}
+		</if>
+		<if test="startDate != null and startDate != '' and endDate != null and endDate != ''">
+		AND
+		    (I.P_START &lt;= #{startDate} AND I.P_END BETWEEN #{startDate} AND #{endDate}
+		OR
+		    I.P_START &gt;= #{startDate} AND I.P_END &lt;= #{endDate}
+		OR
+		    I.P_START BETWEEN #{startDate} AND #{endDate} AND I.P_END &gt;= #{endDate}
+		OR 
+		    I.P_START &lt;= #{startDate} AND I.P_END &gt;= #{endDate} )
+		</if>
+		ORDER BY
+			I.P_CODE
+	</select>
+	
+	<!-- 프로젝트별 TBD인 상태의 수 - 필요데이터 : 프로젝트코드, 소속구분, 기술등급 -->
+	<select id="getTbdCount" parameterType="java.util.HashMap" resultType="string" >
+		SELECT
+			COUNT(*) AS COUNT
+		FROM
+			HR_MEMBER_PROJECT P , HR_MEMBER M, HR_MEMBER_PROJECTIN I
+		WHERE
+			P.P_CODE = I.P_CODE
+		AND
+			M.MEMBER_ID = I.MEMBER_ID
+		AND
+			I.MEMBER_ID LIKE '%'||'TBD'||'%'
+		AND
+			I.P_END &gt;= TO_DATE(SYSDATE, 'YY/MM/DD')
+		AND
+			M.MEMBER_CATEGORY = #{category}
+		AND
+			M.MEMBER_SCLASS = #{sClass}
+		AND
+			I.P_CODE = #{pCode}
+	</select>
+	
+	<!-- 프로젝트별 배정된(수행중) 인원 수 - 필요데이터 : 프로젝트코드, 소속구분, 기술등급 -->
+	<select id="getProjectCountIng" parameterType="java.util.HashMap" resultType="string" >
+		SELECT DISTINCT
+    		COUNT(*) AS COUNT
+		FROM
+			HR_MEMBER_PROJECTIN I, HR_MEMBER_PROJECT P, HR_MEMBER M
+		WHERE
+			I.P_CODE = P.P_CODE
+		AND
+			I.MEMBER_ID = M.MEMBER_ID
+		AND
+			I.P_CODE = #{pCode}
+		AND
+			M.MEMBER_CATEGORY = #{category}
+		AND
+			M.MEMBER_SCLASS = ${sClass}
+		AND
+			I.P_START &lt;= TO_DATE(SYSDATE, 'YY/MM/DD')
+		AND
+			I.P_END &gt;= TO_DATE(SYSDATE, 'YY/MM/DD')
+		AND
+			I.MEMBER_ID NOT LIKE '%'||'TBD'||'%'
+	</select>
+	
+	<!-- 프로젝트별 배정된(투입예정) 인원 수 - 필요데이터 : 프로젝트코드, 소속구분, 기술등급 -->
+	<select id="getProjectCountWill" parameterType="java.util.HashMap" resultType="string" >
+		SELECT DISTINCT
+    		COUNT(*) AS COUNT
+		FROM
+			HR_MEMBER_PROJECTIN I, HR_MEMBER_PROJECT P, HR_MEMBER M
+		WHERE
+			I.P_CODE = P.P_CODE
+		AND
+			I.MEMBER_ID = M.MEMBER_ID
+		AND
+			I.P_CODE = #{pCode}
+		AND
+			M.MEMBER_CATEGORY = #{category}
+		AND
+			M.MEMBER_SCLASS = ${sClass}
+		AND
+			I.P_START &gt; TO_DATE(SYSDATE, 'YY/MM/DD')
+		AND
+			I.MEMBER_ID NOT LIKE '%'||'TBD'||'%'
+	</select>
+	
+	<!-- 투입가능한 인원 수 - 필요데이터 : 소속구분, 기술등급 -->
+	<select id="getMemberReady" parameterType="java.util.HashMap" resultType="string" >
+		SELECT
+		    COUNT(MEMBER_CODE) AS COUNT
+		FROM
+		    HR_MEMBER
+		WHERE
+		    MEMBER_ID NOT IN (SELECT MEMBER_ID FROM HR_MEMBER_PROJECTIN)
+		AND
+			MEMBER_ID NOT LIKE '%'||'TBD'||'%'
+		AND
+		    MEMBER_CATEGORY = #{category}
+		AND
+		    MEMBER_SCLASS = #{sClass}
+	</select>
+	
+	<!-- 멤버 조회 -->
+	<select id="getMemberList" resultType="java.util.HashMap">
+		SELECT dept_code,
+			RANK_CODE,
+			MEMBER_ID,
+			MEMBER_CATEGORY,
+			MEMBER_COMPANY,
+			MEMBER_NAME,
+			MEMBER_PHONE,
+			MEMBER_MOBILE,
+			MEMBER_MAIL,
+			MEMBER_ADDRESS,
+			MEMBER_BIRTHDAY,
+			MEMBER_EMPLOY_DATE,
+			MEMBER_WORK_FLAG,
+			MEMBER_SCHOOL_DATE,
+			MEMBER_SCHOOL_NAME,
+			MEMBER_SCHOOL_JOB,
+			MEMBER_SCHOOL_RESULT,
+			MEMBER_SCHOOL_ETC,
+			MEMBER_SGBN,
+			MEMBER_SCLASS,
+			MEMBER_CAREER
+			,TO_CHAR(HR_MEMBER.MEMBER_CODE) AS MEMBER_CODE FROM HR_MEMBER order by member_name
+    </select>
+    
+    <!-- 투입가능 인력 리스트 -->
+  	<select id="getReadyMemberList" resultType="java.util.HashMap">
+		SELECT DISTINCT
+			TO_CHAR(MEMBER_CODE) AS MEMBER_CODE, MEMBER_NAME, MEMBER_ID, MEMBER_CATEGORY, DEPT_CODE, RANK_CODE, MEMBER_SCLASS
+		FROM
+			HR_MEMBER
+		ORDER BY
+			MEMBER_CODE
+	</select>
+    
+    <!-- 프로젝트 투입 인력 정보 삭제 -->
+    <delete id="deleteProjectIn" parameterType="String">
+    	DELETE
+    		HR_MEMBER_PROJECTIN
+    	WHERE
+    		P_CODE = #{pCode}
+    </delete>
+    
+    <!-- 프로젝트 투입 인력 등록 -->
+    <insert id="updateProjectIn" parameterType="projectVO">
+    	<foreach collection="list" item="item" index="index" open="INSERT ALL " separator=" " close="SELECT * FROM DUAL">
+	    	INTO
+	    		HR_MEMBER_PROJECTIN (
+	    		P_CODE
+	    		,MEMBER_ID
+	    		,P_START
+	    		,P_END
+	    		,DUTY_NAME
+	    	) VALUES (
+	    		#{item.pCode}
+	    		,#{item.memberId}
+	    		,#{item.pStart}
+	    		,#{item.pEnd}
+	    		,#{item.dutyName}
+	    	)
+    	</foreach>
+    </insert>
+    
+    <!-- 프로젝트 조회 -->
+    <select id="getProjectSearch" parameterType="projectVO" resultType="java.util.HashMap">
+    	select P_SUBJECT
+		, P_INCHARGE
+		, PRODUCT_CODE
+		, CUSTOMER_CODE
+		, P_CONT_DATE
+		, P_CONTS
+		, P_CONTE
+		, P_REMARKS
+		, P_WRITER
+		, P_REG_DATE,TO_CHAR(hr_member_project.P_CODE) AS P_CODE from hr_member_project
+		<if test="pConts != null and pConts != '' and pConte != null and pConte != ''">
+		WHERE
+			(p_conts &lt;= #{pConts} AND p_conte BETWEEN #{pConts} AND #{pConte}
+		OR
+		    p_conts &gt;= #{pConts} AND p_conte &lt;= #{pConte}
+		OR
+		    p_conts BETWEEN #{pConts} AND #{pConte} AND p_conte &gt;= #{pConte}
+		OR 
+		    p_conts &lt;= #{pConts} AND p_conte &gt;= #{pConte} )
+		</if>
+		<if test="pIncharge != null and pIncharge != ''">
+		AND
+			P_INCHARGE = #{pIncharge}
+		</if>
+    </select>
+    
+    <!-- 프로젝트 인원 리스트 -->
+    <select id="getProjectSearchSelect" parameterType="projectInVO" resultType="java.util.HashMap">
+    	SELECT
+    		TO_CHAR(M.MEMBER_CODE) AS MEMBER_CODE, I.MEMBER_ID, M.MEMBER_NAME, M.MEMBER_CATEGORY, M.DEPT_CODE, M.RANK_CODE, M.MEMBER_SCLASS, TO_CHAR(I.P_START, 'YYYY/MM/DD') AS P_START, TO_CHAR(I.P_END, 'YYYY/MM/DD') AS P_END, I.DUTY_NAME
+		FROM
+			HR_MEMBER M, HR_MEMBER_PROJECTIN I
+		WHERE
+			M.MEMBER_ID = I.MEMBER_ID
+		AND
+			P_CODE=#{pCode}
+    </select>
+    
+    <!-- 개인별 조회 -->
+    <select id="getIndividualProjectSearch" parameterType="projectInMemberVO" resultType="java.util.HashMap">
+    	select to_char(hr_member.member_code) as member_code, member_name, p_subject, member_category, dept_code, rank_code,
+		member_sclass, p_start, p_end
+		from hr_member, hr_member_projectin, hr_member_project
+		where hr_member.member_id = hr_member_projectin.member_id
+		and hr_member_projectin.p_code = hr_member_project.p_code
+		<![CDATA[and (EXTRACT(YEAR FROM P_START)=#{pStart} OR EXTRACT (YEAR FROM P_END )=#{pStart})]]>
+		<if test="!memberId.equals('ALL')">
+		and hr_member_projectin.member_id=#{memberId}
+		</if>
+		<if test="!memberCategory.equals('ALL')">
+		and member_category=#{memberCategory}
+		</if>
+		<if test="!deptCode.equals('ALL')">
+		and dept_code=#{deptCode}
+		</if>
+		<if test="!rankCode.equals('ALL')">
+		and rank_code=#{rankCode}
+		</if>
+		<if test="!memberSclass.equals('ALL')">
+		and member_sclass=#{memberSclass}
+		</if>
+    </select>
+    
+</mapper>

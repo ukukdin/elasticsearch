@@ -1,0 +1,473 @@
+<?xml version="1.0" encoding= "UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+ 
+<mapper namespace="nurier.scraping.member.dao.MemberSqlMapper">
+    
+    
+    <!-- 사원 등록 -->
+    <insert id="setMemberInsert" parameterType="java.util.List">
+    
+    	<selectKey resultType="String" keyProperty="seq_num" order="BEFORE">
+            SELECT NVL(MAX(MEMBER_CODE),0)+1 as seq_num FROM HR_MEMBER
+        </selectKey>
+        INSERT INTO HR_MEMBER (
+            MEMBER_CODE,
+            DEPT_CODE,
+            RANK_CODE,
+            MEMBER_ID,
+            MEMBER_NAME,
+            MEMBER_PHONE,
+            MEMBER_MOBILE,
+            MEMBER_MAIL,
+            MEMBER_ADDRESS,
+            MEMBER_BIRTHDAY,
+            MEMBER_SGBN,
+            MEMBER_CATEGORY,
+            MEMBER_COMPANY,
+            MEMBER_EMPLOY_DATE,
+            MEMBER_SCLASS,
+            MEMBER_CAREER,
+            MEMBER_WORK_FLAG,
+            MEMBER_SCHOOL_DATE,
+            MEMBER_SCHOOL_NAME,
+            MEMBER_SCHOOL_JOB,
+            MEMBER_SCHOOL_RESULT,
+            MEMBER_SCHOOL_ETC
+                    ) VALUES (
+            #{seq_num},
+            #{deptCode},
+            #{rankCode},
+            #{memberId},
+            #{memberName},
+            #{memberPhone},
+            #{memberMobile},
+            #{memberMail},
+            #{memberAddress},
+            #{memberBirthday},
+            #{memberSgbn},
+            #{memberCategory},
+            #{memberCompany},
+            TO_DATE(#{memberEmployDate},'YY/MM/DD'),
+            #{memberSclass},
+            #{memberCareer},
+            #{memberWorkFlag},
+            #{memberSchoolDate},
+            #{memberSchoolName},
+            #{memberSchoolJob},
+            #{memberSchoolResult},
+            #{memberSchoolEtc}
+       )
+       
+    </insert>
+    
+    <insert id="setMemberInsert2" parameterType="java.util.List">
+    	<selectKey resultType="String" keyProperty="seq_num" order="BEFORE">
+            SELECT NVL(MAX(MEMBERSERVE_CODE),0)+1 as seq_num FROM HR_MEMBER_SERVE
+        </selectKey>
+     INSERT ALL 
+       <foreach collection="MemberServeList" index="index" item="item" separator=" " >
+     	INTO HR_MEMBER_SERVE (
+            MEMBERSERVE_CODE,
+            MEMBER_CODE,
+            MEMBERSERVE_COMPANY,
+            MEMBERSERVE_DATE,
+            MEMBERSERVE_JOB,
+            MEMBERSERVE_JIK
+                    ) VALUES (
+            #{seq_num} + #{index} ,
+            (SELECT MAX(MEMBER_CODE) from HR_MEMBER),
+            #{item.memberServeCompany},
+            #{item.memberServeDate},
+            #{item.memberServeJob},
+            #{item.memberServeJik}
+         
+     )
+     
+     </foreach>
+     SELECT * FROM DUAL
+    </insert>
+    
+    <insert id="setMemberInsert3" parameterType="java.util.List">
+    
+    	<selectKey resultType="String" keyProperty="seq_num" order="BEFORE">
+            SELECT NVL(MAX(MEMBER_LICENSE_CODE),0)+1 as seq_num FROM HR_MEMBER_LICENSE
+        </selectKey>
+    
+     INSERT ALL
+          <foreach collection="MemberLicenseList" index="index" item="item" separator=" " >
+         
+          INTO HR_MEMBER_LICENSE (
+            MEMBER_LICENSE_CODE,
+            MEMBER_CODE,
+            MEMBER_LICENSE_NAME,
+            MEMBER_LICENSE_DATE,
+            MEMBER_LICENSE_GRADE,
+            MEMBER_LICENSE_ETC
+                    ) VALUES (
+            #{seq_num} + #{index} ,
+            (SELECT MAX(MEMBER_CODE) from HR_MEMBER),
+            #{item.memberLicenseName},
+            #{item.memberLicenseDate},
+            #{item.memberLicenseGrade},
+            #{item.memberLicenseEtc}
+         
+     )
+     
+      </foreach>
+       SELECT * FROM DUAL
+    </insert>
+    
+    <insert id="setMemberInsert4" parameterType="java.util.List">
+    
+      	<selectKey resultType="String" keyProperty="seq_num" order="BEFORE">
+            SELECT NVL(MAX(MEMBERWORK_CODE),0)+1 as seq_num FROM HR_MEMBER_WORK
+        </selectKey>
+        
+     INSERT ALL 
+     	<foreach collection="MemberWorkList" index="index" item="item" separator=" " >
+     	INTO HR_MEMBER_WORK (
+            MEMBERWORK_CODE,
+            MEMBER_CODE,
+            MEMBERWORK_COMPANY,
+            MEMBERWORK_DATE,
+            MEMBERWORK_DETAIL,
+            MEMBERWORK_JOB,
+            MEMBERWORK_TYPE,
+            MEMBERWORK_ETC
+                    ) VALUES (
+            #{seq_num} + #{index} ,
+            (SELECT MAX(MEMBER_CODE) from HR_MEMBER),
+            #{item.memberWorkCompany},
+            #{item.memberWorkDate},
+            #{item.memberWorkDetail},
+            #{item.memberWorkJob},
+            #{item.memberWorkType},
+            #{item.memberWorkEtc}
+     )
+     
+     </foreach>
+     SELECT * FROM DUAL
+    </insert>
+    
+    
+      <!-- 사원 검색 조회 -->
+     <select id="getListOfUsers" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        <include refid="paging.headerPagingStart"/>
+        SELECT 
+            MEMBER_CODE,
+            MEMBER_CATEGORY,
+            MEMBER_NAME,
+            MEMBER_ID,
+            DEPT_CODE,
+            RANK_CODE,
+            MEMBER_PHONE,
+            MEMBER_MAIL,
+            MEMBER_ADDRESS,
+            MEMBER_MOBILE,
+            MEMBER_BIRTHDAY,
+            TO_CHAR(MEMBER_EMPLOY_DATE,'YYYYMMDD') MEMBER_EMPLOY_DATE,
+            MEMBER_SCLASS,
+            MEMBER_WORK_FLAG
+        FROM
+            HR_MEMBER  
+        WHERE 1=1
+  		<if test="MEMBER_CATEGORY != null and MEMBER_CATEGORY != '' ">
+            AND MEMBER_CATEGORY = #{MEMBER_CATEGORY}
+        </if>
+        <if test="DEPT_CODE != null and DEPT_CODE != '' ">
+            AND DEPT_CODE = #{DEPT_CODE}
+        </if>
+        <if test="MEMBER_SCLASS != null and MEMBER_SCLASS != '' ">
+            AND MEMBER_SCLASS = #{MEMBER_SCLASS}
+        </if>
+        <if test="RANK_CODE != null and RANK_CODE != '' ">
+            AND RANK_CODE = #{RANK_CODE}
+        </if>
+        <if test="MEMBER_NAME != null and MEMBER_NAME != '' ">
+            AND MEMBER_NAME LIKE '%' || #{MEMBER_NAME} || '%'
+        </if>
+        <if test="MEMBER_ID != null and MEMBER_ID != '' ">
+            AND MEMBER_ID LIKE '%' || #{MEMBER_ID} || '%'
+        </if>
+             ORDER BY MEMBER_CODE DESC
+        <include refid="paging.footerPagingEnd"/>
+    </select>
+    
+    
+  <!-- 사원 조회 -->
+    <select id="getMemberListView" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            MEMBER_CODE,
+            MEMBER_ID,
+            DEPT_CODE,
+            RANK_CODE,
+            MEMBER_NAME,
+            NVL(MEMBER_PHONE, ' ') AS MEMBER_PHONE ,
+            NVL(MEMBER_MOBILE, ' ') AS MEMBER_MOBILE,
+            NVL(MEMBER_MAIL, ' ') AS MEMBER_MAIL,
+            NVL(MEMBER_ADDRESS, ' ') AS MEMBER_ADDRESS,
+            NVL(MEMBER_BIRTHDAY, ' ') AS MEMBER_BIRTHDAY,
+            NVL(MEMBER_SGBN, ' ') AS MEMBER_SGBN,
+            MEMBER_CATEGORY,
+            NVL(MEMBER_COMPANY, ' ') AS MEMBER_COMPANY,
+            TO_CHAR(MEMBER_EMPLOY_DATE,'YYYY-MM-DD') MEMBER_EMPLOY_DATE,
+            MEMBER_SCLASS,
+            NVL(MEMBER_CAREER, ' ') AS MEMBER_CAREER,
+            MEMBER_SCHOOL_DATE,
+            NVL(MEMBER_SCHOOL_NAME, ' ') AS MEMBER_SCHOOL_NAME,
+            NVL(MEMBER_SCHOOL_JOB, ' ') AS MEMBER_SCHOOL_JOB,
+            NVL(MEMBER_SCHOOL_RESULT, ' ') AS MEMBER_SCHOOL_RESULT,
+            NVL(MEMBER_SCHOOL_ETC, ' ') AS MEMBER_SCHOOL_ETC
+        FROM HR_MEMBER
+        WHERE MEMBER_CODE = #{memberCode} 
+      
+       </select>
+       
+       <select id="getMemberListView2" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            MEMBERSERVE_CODE,
+            MEMBERSERVE_COMPANY,
+            MEMBERSERVE_DATE,
+            MEMBERSERVE_JOB,
+            MEMBERSERVE_JIK
+	      FROM  HR_MEMBER_SERVE
+	      WHERE 1=1
+        <if test="MEMBER_CODE != null and MEMBER_CODE != '' ">
+          AND  MEMBER_CODE = #{MEMBER_CODE}
+        </if>
+        ORDER BY MEMBERSERVE_CODE ASC
+        
+       </select>
+       
+       <select id="getMemberListView3" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            MEMBER_LICENSE_CODE,
+            MEMBER_LICENSE_NAME,
+            MEMBER_LICENSE_DATE,
+            MEMBER_LICENSE_GRADE,
+            MEMBER_LICENSE_ETC
+	      FROM  HR_MEMBER_LICENSE
+	      WHERE 1=1
+        <if test="MEMBER_CODE != null and MEMBER_CODE != '' ">
+          AND  MEMBER_CODE = #{MEMBER_CODE}
+        </if>
+           ORDER BY MEMBER_LICENSE_CODE ASC
+        
+       </select>
+       
+       <select id="getMemberListView4" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            MEMBERWORK_CODE,
+            MEMBERWORK_COMPANY,
+            MEMBERWORK_DATE,
+            MEMBERWORK_DETAIL,
+            MEMBERWORK_JOB,
+            MEMBERWORK_TYPE,
+            MEMBERWORK_ETC
+	      FROM  HR_MEMBER_WORK
+	      WHERE 1=1
+        <if test="MEMBER_CODE != null and MEMBER_CODE != '' ">
+          AND  MEMBER_CODE = #{MEMBER_CODE}
+        </if>
+        ORDER BY MEMBERWORK_CODE ASC
+       
+       </select>
+       
+       
+       
+       <!-- 사원 수정-->
+    <update id="setMemberUpdate" parameterType="java.util.List">
+        UPDATE HR_MEMBER SET
+            DEPT_CODE = #{deptCode},
+            RANK_CODE = #{rankCode},
+            MEMBER_ID = #{memberId},
+            MEMBER_NAME = #{memberName}, 
+            MEMBER_PHONE = #{memberPhone},
+            MEMBER_MOBILE = #{memberMobile},
+            MEMBER_MAIL = #{memberMail},
+            MEMBER_ADDRESS =#{memberAddress},
+            MEMBER_BIRTHDAY =#{memberBirthday},
+            MEMBER_SGBN = #{memberSgbn},
+            MEMBER_CATEGORY = #{memberCategory},
+            MEMBER_COMPANY = #{memberCompany},
+            MEMBER_EMPLOY_DATE = TO_DATE(#{memberEmployDate},'YY/MM/DD'),
+            MEMBER_SCLASS = #{memberSclass},
+            MEMBER_CAREER = #{memberCareer},
+            MEMBER_SCHOOL_DATE = #{memberSchoolDate},
+            MEMBER_SCHOOL_NAME = #{memberSchoolName},
+            MEMBER_SCHOOL_JOB = #{memberSchoolJob},
+            MEMBER_SCHOOL_RESULT = #{memberSchoolResult},
+            MEMBER_SCHOOL_ETC = #{memberSchoolEtc}
+      WHERE MEMBER_CODE = #{memberCode}
+    
+    </update>
+    
+    <!-- 재직사항 수정 및 입력  -->
+    <update id="setMemberUpdate2" parameterType="java.util.List">
+		<selectKey resultType="String" keyProperty="seq_num" order="BEFORE">
+            SELECT NVL(MAX(MEMBERSERVE_CODE),0)+1 as seq_num FROM HR_MEMBER_SERVE
+        </selectKey>
+      <foreach collection="MemberServeList" index="index" item="item" separator=";" open="DECLARE BEGIN" close=";END;"  >
+	    MERGE INTO HR_MEMBER_SERVE
+        USING dual
+          ON (MEMBERSERVE_CODE = #{item.memberServeCode})
+          WHEN MATCHED THEN
+            UPDATE SET
+         	    MEMBERSERVE_COMPANY = #{item.memberServeCompany},
+	            MEMBERSERVE_DATE =  #{item.memberServeDate},
+	            MEMBERSERVE_JOB = #{item.memberServeJob},
+	            MEMBERSERVE_JIK = #{item.memberServeJik}
+      	 WHEN NOT MATCHED THEN
+	        INSERT
+	       (
+            MEMBERSERVE_CODE,
+            MEMBER_CODE,
+            MEMBERSERVE_COMPANY,
+            MEMBERSERVE_DATE,
+            MEMBERSERVE_JOB,
+            MEMBERSERVE_JIK
+                    ) VALUES (
+            #{seq_num} + #{index},
+            #{item.memberCode},
+            #{item.memberServeCompany},
+            #{item.memberServeDate},
+            #{item.memberServeJob},
+            #{item.memberServeJik}
+	  
+	     )
+     
+     </foreach>
+    </update>
+
+    <!-- 자격사항 수정 및 입력  -->
+     <update id="setMemberUpdate3" parameterType="java.util.List">
+     
+        <selectKey resultType="String" keyProperty="seq_num" order="BEFORE">
+            SELECT NVL(MAX(MEMBER_LICENSE_CODE),0)+1 as seq_num FROM HR_MEMBER_LICENSE
+        </selectKey>
+     
+          <foreach collection="MemberLicenseList" index="index" item="item" separator=";" open="DECLARE BEGIN" close=";END;"  >
+       MERGE INTO HR_MEMBER_LICENSE
+        USING dual
+          ON (MEMBER_LICENSE_CODE = #{item.memberLicenseCode})
+          WHEN MATCHED THEN
+                   UPDATE  SET
+            MEMBER_LICENSE_NAME =  #{item.memberLicenseName},
+            MEMBER_LICENSE_DATE =  #{item.memberLicenseDate},
+            MEMBER_LICENSE_GRADE = #{item.memberLicenseGrade},
+            MEMBER_LICENSE_ETC  =  #{item.memberLicenseEtc}
+      	 WHEN NOT MATCHED THEN
+	         INSERT
+	         (
+	            MEMBER_LICENSE_CODE,
+	            MEMBER_CODE,
+	            MEMBER_LICENSE_NAME,
+	            MEMBER_LICENSE_DATE,
+	            MEMBER_LICENSE_GRADE,
+	            MEMBER_LICENSE_ETC
+	                    ) VALUES (
+	            #{seq_num} + #{index} ,
+	            #{item.memberCode},
+	            #{item.memberLicenseName},
+	            #{item.memberLicenseDate},
+	            #{item.memberLicenseGrade},
+	            #{item.memberLicenseEtc}
+	     )
+     
+     </foreach>
+    </update>
+
+   <!-- 경력사항 수정 및 입력  -->
+   <update id="setMemberUpdate4" parameterType="java.util.List">
+   
+   	    <selectKey resultType="String" keyProperty="seq_num" order="BEFORE">
+            SELECT NVL(MAX(MEMBERWORK_CODE),0)+1 as seq_num FROM HR_MEMBER_WORK
+        </selectKey>
+      
+    <foreach collection="MemberWorkList" index="index" item="item" separator=";" open="DECLARE BEGIN" close=";END;"  >
+      MERGE INTO HR_MEMBER_WORK
+        USING dual
+          ON (MEMBERWORK_CODE = #{item.memberWorkCode})
+          WHEN MATCHED THEN
+                   UPDATE SET
+            MEMBERWORK_COMPANY = #{item.memberWorkCompany},
+            MEMBERWORK_DATE = #{item.memberWorkDate},
+            MEMBERWORK_DETAIL= #{item.memberWorkDetail},
+            MEMBERWORK_JOB = #{item.memberWorkJob},
+            MEMBERWORK_TYPE = #{item.memberWorkType},
+            MEMBERWORK_ETC = #{item.memberWorkEtc}
+      	 WHEN NOT MATCHED THEN
+	         INSERT
+	      (
+	        MEMBERWORK_CODE,
+            MEMBER_CODE,
+            MEMBERWORK_COMPANY,
+            MEMBERWORK_DATE,
+            MEMBERWORK_DETAIL,
+            MEMBERWORK_JOB,
+            MEMBERWORK_TYPE,
+            MEMBERWORK_ETC
+                    ) VALUES (
+            #{seq_num} + #{index},
+            #{item.memberCode},
+            #{item.memberWorkCompany},
+            #{item.memberWorkDate},
+            #{item.memberWorkDetail},
+            #{item.memberWorkJob},
+            #{item.memberWorkType},
+            #{item.memberWorkEtc}
+           )
+           
+     </foreach>
+    </update> 
+    
+    
+    <!-- 사원 재직, 퇴사 처리 -->
+    <update id="setMemberflagModify" parameterType="java.util.HashMap">
+
+	   UPDATE HR_MEMBER  SET   
+	     	MEMBER_WORK_FLAG = #{memberWorkFlag}
+	   WHERE MEMBER_CODE = TO_NUMBER(#{memeberCode})
+    
+    </update>
+    
+    <!-- 사원 삭제-->
+    <delete id="setMemberDelete" parameterType="String">
+        DELETE FROM HR_MEMBER_SERVE A 
+        WHERE EXISTS(SELECT * FROM HR_MEMBER B WHERE A.MEMBER_CODE = B.MEMBER_CODE AND B.MEMBER_CODE = TO_NUMBER(#{memberCode}))
+    </delete>
+    
+    <delete id="setMemberDelete2" parameterType="String">
+        DELETE FROM HR_MEMBER_LICENSE A
+         WHERE EXISTS(SELECT * FROM HR_MEMBER B WHERE A.MEMBER_CODE = B.MEMBER_CODE AND B.MEMBER_CODE = TO_NUMBER(#{memberCode}))
+    </delete>
+    
+    <delete id="setMemberDelete3" parameterType="String">
+        DELETE FROM HR_MEMBER_WORK A
+         WHERE EXISTS(SELECT * FROM HR_MEMBER B WHERE A.MEMBER_CODE = B.MEMBER_CODE AND B.MEMBER_CODE = TO_NUMBER(#{memberCode}))
+    </delete>
+    
+    <delete id="setMemberDelete4" parameterType="String">
+        DELETE FROM HR_MEMBER
+        WHERE MEMBER_CODE = TO_NUMBER(#{memberCode})
+    </delete>
+    
+       <!-- 재직사항 삭제-->
+    <delete id="setServeDelete" parameterType="String">
+         DELETE FROM HR_MEMBER_SERVE
+        WHERE MEMBERSERVE_CODE = TO_NUMBER(#{memberServeCode})
+    </delete>
+    
+       <!-- 자격사항 삭제-->
+    <delete id="setLicenseDelete" parameterType="String">
+         DELETE FROM HR_MEMBER_LICENSE
+        WHERE MEMBER_LICENSE_CODE = TO_NUMBER(#{memberLicenseCode})
+    </delete>
+    
+       <!-- 경력사항 삭제-->
+    <delete id="setWorkDelete" parameterType="String">
+         DELETE FROM HR_MEMBER_WORK
+        WHERE MEMBERWORK_CODE = TO_NUMBER(#{memberWorkCode})
+    </delete>
+  
+</mapper>

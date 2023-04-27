@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding= "UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+ 
+<mapper namespace="com.nurier.web.nfds.setting.dao.SettingUserManageSqlMapper">
+    
+    <sql id="GroupAuthColumn">    
+          GROUP_CODE       AS group_code
+        , GROUP_NAME       AS group_name
+        , GROUP_COMMENT    AS group_comment
+        , UPDATE_TIME      AS update_time
+        , RGDATE           AS rgdate
+        , RGNAME           AS rgname
+        , MODDATE          AS moddate
+        , MODNAME          AS modname
+    </sql>
+
+    <select id="getAuthGroupList" parameterType="authGroupVO" resultType="authGroupVO">
+        SELECT 
+            <include refid="GroupAuthColumn" />
+        FROM NFDS_USER_GROUP
+    </select>
+    
+    <select id="getAuthGroupInfo" parameterType="authGroupVO" resultType="authGroupVO">
+        SELECT 
+            <include refid="GroupAuthColumn" />
+        FROM NFDS_USER_GROUP
+        WHERE GROUP_CODE = #{group_code}
+    </select>
+
+    <insert id="setAuthGroupInsert" parameterType="authGroupVO" >
+        <selectKey resultType="String" keyProperty="group_code" order="BEFORE">
+            SELECT NVL(MAX(TO_NUMBER(GROUP_CODE)),00000001)+1 as group_code FROM NFDS_USER_GROUP
+        </selectKey>
+        INSERT INTO NFDS_USER_GROUP ( 
+              GROUP_CODE 
+            , GROUP_NAME
+            , GROUP_COMMENT
+            , RGDATE
+            , RGNAME
+        ) VALUES (
+              #{group_code}
+            , #{group_name}
+            , #{group_comment}
+            , SYSDATE
+            , #{rgname}
+        )
+    </insert>
+ 
+    <update id="setAuthGroupUpdate" parameterType="authGroupVO">
+        UPDATE NFDS_USER_GROUP SET
+              GROUP_NAME    = #{group_name}
+            , GROUP_COMMENT = #{group_comment}
+            , UPDATE_TIME   = SYSDATE
+            , MODDATE       = SYSDATE
+            , MODNAME       = #{modname}
+        WHERE GROUP_CODE = #{group_code}
+    </update>
+    
+    <select id="getAuthGroupCheckDelete" parameterType="authGroupVO" resultType="int" >
+        SELECT COUNT(*)
+        FROM NFDS_USER
+        WHERE GROUP_CODE = #{group_code}
+    </select>
+    
+    <delete id="setAuthGroupDelete" parameterType="authGroupVO">
+        DELETE NFDS_USER_GROUP
+        WHERE GROUP_CODE = #{group_code}
+    </delete>
+
+    <insert id="setMenuAuthInsert" parameterType="authGroupVO" >
+        INSERT INTO NFDS_USER_MENU_AUTH (
+              GROUP_CODE 
+            , MNUCOD
+        ) VALUES ( 
+              #{group_code}
+            , #{mnucod}
+        )
+    </insert>
+    
+    <delete id="setMenuAuthDelete" parameterType="authGroupVO">
+        DELETE NFDS_USER_MENU_AUTH
+        WHERE GROUP_CODE = #{group_code}
+    </delete>
+
+    <select id="getMenuSelectList" parameterType="menuDataVO" resultType="menuDataVO"> 
+        SELECT 
+              A.SEQ_NUM         AS seq_num
+            , A.MNUCOD          AS mnucod
+            , A.MNUNAM          AS mnunam
+            , A.MNUGBN          AS mnugbn
+            , A.EXECNM          AS execnm
+            , A.ICONPT          AS iconpt
+            , A.PARENT          AS parent
+            , A.ORDRNO          AS ordrno
+            , A.REMARK          AS remark
+            , A.IS_USED         AS is_used
+            , B.GROUP_CODE      AS group_code
+        FROM NFDS_MENU A LEFT OUTER JOIN NFDS_USER_MENU_AUTH B 
+          ON A.MNUCOD = B.MNUCOD AND B.GROUP_CODE = #{group_code}
+        WHERE IS_USED = 'Y'
+        ORDER BY A.MNUCOD 
+    </select>
+
+</mapper>

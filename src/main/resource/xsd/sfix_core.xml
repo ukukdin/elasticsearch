@@ -1,0 +1,506 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:sfix="http://sfix.kfisac.or.kr/sfix-1" xmlns:sfixCommon="http://sfix.kfisac.or.kr/common-1" xmlns:object="http://sfix.kfisac.or.kr/object-1" xmlns:organization="http://sfix.kfisac.or.kr/organization-1" targetNamespace="http://sfix.kfisac.or.kr/sfix-1" elementFormDefault="qualified" attributeFormDefault="unqualified" version="1.0" xml:lang="ko">
+	<xs:annotation>
+		<xs:documentation>이 스키마는 금융회사 간 이상금융거래정보 공유를 위해 금융보안원에서 개발되었습니다.</xs:documentation>
+		<xs:appinfo>
+			<schema>SFIX Core</schema>
+			<version>1.0</version>
+			<date>2016-02-22 09:00:00 AM</date>
+			<short_description>Structured Fraud Information eXpression (SFIX) - 이상금융거래정보 표현 형식 (스키마)</short_description>
+			<terms_of_use>Copyright (c) 2015, Financial Security Institutes. All rights reserved.</terms_of_use>
+		</xs:appinfo>
+	</xs:annotation>
+	<xs:import namespace="http://sfix.kfisac.or.kr/common-1" schemaLocation="sfix_common.xsd"/>
+	<xs:import namespace="http://sfix.kfisac.or.kr/object-1" schemaLocation="object.xsd"/>
+	<xs:import namespace="http://sfix.kfisac.or.kr/organization-1" schemaLocation="organization.xsd"/>
+	<xs:element name="SFIX_Package" type="sfix:SFIXType">
+		<xs:annotation>
+			<xs:documentation>SFIX_Package 필드는  하나의 이상금융거래정보 표현형식(SFIX: Structred Threat Information eXpression)의 구조화된 정보를 포함하고 있습니다.</xs:documentation>
+		</xs:annotation>
+	</xs:element>
+	<xs:complexType name="SFIXType">
+		<xs:annotation>
+			<xs:documentation>SFIXType은 하나의 이상금융거래정보를 표현하기 위한 구조를 정의합니다.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="SFIX_Header" type="sfix:SFIXHeaderType" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>SFIX Header는 이상금융거래정보 공유시스템(FISS)에서 생성하고 관리하는 정보로 버전, 고유식별자, 공유시간 등 SFIX 기본 정보를 포함하고 있습니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="SFIX_Data" type="sfix:SFIXDataType" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>SFIX_Data는 실제 공유하고자 하는 이상금융거래정보로 참가기관에서 생성합니다. </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<!-- SFIX Header 구조 부분 -->
+	<xs:complexType name="SFIXHeaderType">
+		<xs:annotation>
+			<xs:documentation>FISS에서 생성하는 정보로 공유시간, 공유기관, SFIX_Data의 무결성 보증을 위한 해쉬값 등을 포함한 메타데이터 정보입니다.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="SFIX_Identification" type="sfixCommon:SFIXIdentificationType" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>하나의 SFIX에 대한 고유 식별자 정보로 FISS에서 생성합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="SFIX_Time" type="sfixCommon:Timestamp" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>FISS에서 SFIX 공유를 시작한 시간으로 FISS에서 생성합니다.</xs:documentation>
+					<xs:documentation>* FISS에서 공유를 시작한 시간으로 실제 공유받은 시간과 차이가 날 수 있습니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Shared_Time" type="sfixCommon:Timestamp" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>금융회사가 FISS에 공유를 요청한 시간으로 FISS에서 생성합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Source_Organization_Code" type="organization:OrganizationCodeType">
+				<xs:annotation>
+					<xs:documentation>SFIX를 공유한 기관의 기관코드로 FISS에서 생성합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Checksum" type="sfixCommon:ChecksumType" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>금융회사에서 공유한 정보의 무결성 검증을 위한 Checksum 값으로 FISS에서 생성합니다. Checksum은 금융회사에서 작성한 SFIX_Data를 SHA-256으로 해쉬한 값입니다. </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<!-- SFIX Data 구조 부분 -->
+	<xs:complexType name="SFIXDataType">
+		<xs:annotation>
+			<xs:documentation>실제 공유하고자 하는 이상금융거래정보의 표현 형식을 정의하며, 공유를 요청하는 금융회사에서 작성하는 메타데이터 정보입니다.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="Information" type="sfix:InformationType" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>금융회사에서 부여하는 고유식별자, 이상금융거래 확인 시간, 정보구분 등 이상금융거래정보 공유 시 기초가 되는 정보의 메타데이터 정보입니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Attackers" type="sfix:AttackerType" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>이상금융거래에서 악의적인 행위를 한 대상 정보로 1개 이상의 Object로 구성되어 있습니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Victims" type="sfix:VictimType" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>이상금융거래에서 악의적인 행위로 피해를 받은 대상 정보로 1개 이상의 Object로 구성되어 있습니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Targets" type="sfix:TargetType" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>이상금융거래의 대상이 되는 정보로 1개 이상의 Object로 구성되어 있습니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Actions" type="sfix:ActionsType" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>이상금융거래에 대한 행위 정보를 나타냅니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="References" type="sfix:ReferencesType" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>이전에 공유된 이상금융거래정보를 참조하기 위한 정보로 SFIX ID 또는 SFIX_Data>Information>Identification을 사용합니다.</xs:documentation>
+					<xs:documentation>이상금융거래의 수정 정보 또는 해지 정보 공유 시 반드시 References에 이전에 공유된 관련 정보를 넣어야 합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<!--  SFIX_Header  -->
+	<xs:simpleType name="VersionType">
+		<xs:annotation>
+			<xs:documentation>SFIX 버전을 나타내는 정보로 SFIX가 변경 또는 개선이 될 때마다 버전 정보는 증가합니다.</xs:documentation>
+			<xs:documentation>* SFIX 버전 정보가 다를 경우 올바르게 정보 공유가 되지 않을 수 있습니다.</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="1.0">
+				<xs:annotation>
+					<xs:documentation>SFIX 버전 정보를 나타내며, 기본값은 1.0입니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<!--  SFIX_Data  -->
+	<!-- 	SFIX_Data >	Information  -->
+	<xs:complexType name="InformationType">
+		<xs:annotation>
+			<xs:documentation>금융회사에서 부여하는 고유식별자, 이상금융거래 확인 시간, 정보구분 등 이상금융거래정보 공유 시 기초가 되는 정보의 메타데이터 정보입니다.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="Version" type="sfix:VersionType" default="1.0" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>SFIX 버전정보로 금융회사에서 작성합니다. SFIX 버전에 따라 표현되는 형식이 다를 수 있습니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Identification" type="sfixCommon:IdentificationType" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>금융회사에서 관리하는 고유 정보식별자로 금융회사에서 작성합니다.</xs:documentation>
+					<xs:documentation>* Identification이 동일하거나 형식이 다를 경우 FISS에서 공유를 거부할 수 있습니다.</xs:documentation>
+					<xs:documentation>금융회사에서 부여하는 공유정보 일련번호로 (금융회사 코드)-(년도)-(일련번호) 로 구성</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Timestamp" type="sfixCommon:Timestamp" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>금융회사에서 이상금융거래 사고 또는 의심으로 탐지(확인)한 시간으로 금융회사에서 작성합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Type_Of_Sharing" type="sfix:TypeOfSharingType" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>
+							이상금융거래 사고정보, 의심정보 등의 정보구분 정보로 금융회사에서 작성합니다.
+						</xs:documentation>
+					<xs:documentation>
+							이상금융거래정보로 (사고정보, 의심정보, 테스트 사고정보, 테스트 사고정보) 4가지로 구성되어 있다.
+						</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Fraud_Target" type="sfix:FraudTargetType" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>
+							이상금융거래가 발생한 6가지(은행, 금융투자, 보험, 중소서민, 기타, 유관기관) 권역을 나타내는 정보로 금융회사에서 작성합니다.
+						</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Urgent_Level" type="sfix:UrgentLevelType" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>공유 정보의 긴급도를 나타내는 정보로 금융회사에서 작성합니다.</xs:documentation>
+					<xs:documentation>긴급도는 "긴급", "높음", "보통", "낮음" 4가지로 구분이 됩니다.</xs:documentation>
+					<xs:documentation> 사고정보는 원칙적으로 "긴급" 또는 "높음"으로 공유를 하며, 의심정보는 상황에 따라 긴급도를 정합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Behavior" type="sfix:BehaviorType" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>이상금융거래정보 공유업무 구분으로 금융회사에서 작성합니다.</xs:documentation>
+					<xs:documentation>업무구분 항목으로 "등록", "수정", "해지" 로 구분이 된다.</xs:documentation>
+					<xs:documentation>신규 이상금융거래정보를 등록 할 시 "등록"으로 하며, 기존에 공유된 이상금융거래정보를 수정해서 다시 공유 할 시 "수정"으로 합니다. 기존에 공유된 이상금융거래정보에 대해서 해지가 필요할 경우 "해지"로 합니다. "수정", "해지" 정보를 공유 시 Reference에 기존 공유된 정보를 포함해서 공유해야 합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Destination_Organization_Code" type="organization:OrganizationCodeType" minOccurs="1" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>SFIX를 공유 받을 기관의 기관코드로 금융회사에서 작성합니다.</xs:documentation>
+					<xs:documentation>기관코드는 전체(G999), 그룹(G001~G006), 금융회사 기관코드(4자리 숫자)로 되어 있습니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Description" type="xs:string" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>금융사고 또는 이상금융거래정보 공유를 하게 된 경위 및 세부 내용을 설명한다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:simpleType name="TypeOfSharingType">
+		<xs:annotation>
+			<xs:documentation>이상금융거래정보의 종류를 나타내는 정보로 사고정보, 의심정보, 테스트 사고정보, 테스트 의심정보 4가지로 구분된다.</xs:documentation>
+			<xs:documentation>실제 운영 중인 FISS 서버에는 사고정보와 의심정보만을 공유할 수 있으며, 테스트 FISS에서는 테스트 사고정보, 테스트 의심정보 만을 공유할 수 있다.</xs:documentation>
+			<xs:documentation>실제 운영 FISS 서버에 테스트정보 공유 시 무시가 되며, 테스트 FISS 서버에 사고정보, 의심정보 공유시 무시가 된다.</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="사고정보">
+				<xs:annotation>
+					<xs:documentation>이상금융거래 사고정보 시 선택합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="의심정보">
+				<xs:annotation>
+					<xs:documentation>이상금융거래 의심정보 시 선택합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="테스트 사고정보">
+				<xs:annotation>
+					<xs:documentation>테스트 목적의 이 이상금융거래 사고정보 시 선택합니다.</xs:documentation>
+					<xs:documentation>* fiss-test.kfisac.or.kr, fiss-api-test.kfisac.or.kr에서 사용됩니다. 실 업무에서는 사용할 수 없습니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="테스트 의심정보">
+				<xs:annotation>
+					<xs:documentation>테스트 목적의 이상금융거래 의심정보 시 선택합니다.</xs:documentation>
+					<xs:documentation>* fiss-test.kfisac.or.kr, fiss-api-test.kfisac.or.kr에서 사용됩니다. 실 업무에서는 사용할 수 없습니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="FraudTargetType">
+		<xs:annotation>
+			<xs:documentation>이상금융거래정보가 발생되는 권역을 나타내며, 금융제도에서의 금융기관(은행, 금융투자, 보험, 중소서민, 기타)과 유관기관을 포함하여 6개 권역으로 구분합니다.</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="은행">
+				<xs:annotation>
+					<xs:documentation>이상금융거래가 은행 권역에서 발생되었을 경우 선택합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="금융투자">
+				<xs:annotation>
+					<xs:documentation>이상금융거래가 금융투자 권역에서 발생되었을 경우 선택합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="보험">
+				<xs:annotation>
+					<xs:documentation>이상금융거래가 보험 권역에서 발생되었을 경우 선택합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="중소서민">
+				<xs:annotation>
+					<xs:documentation>이상금융거래가 중소서민 권역에서 발생되었을 경우 선택합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="기타">
+				<xs:annotation>
+					<xs:documentation>이상금융거래가 기타 권역에서 발생되었을 경우 선택합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="유관기관">
+				<xs:annotation>
+					<xs:documentation>이상금융거래가 유관기관 권역에서 발생되었을 경우 선택합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="UrgentLevelType">
+		<xs:annotation>
+			<xs:documentation>긴급도를 나타내며, 긴급, 높음, 보통, 낮음의 4가지로 구분합니다.</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="긴급">
+				<xs:annotation>
+					<xs:documentation>이상금융거래 사고정보 등록, 수정 시 사용됩니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="높음">
+				<xs:annotation>
+					<xs:documentation>이상금융거래 의심정보 등록, 수정 시 사용됩니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="보통">
+				<xs:annotation>
+					<xs:documentation>이상금융거래 의심정보 등록, 수정 시 사용됩니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="낮음">
+				<xs:annotation>
+					<xs:documentation>이상금융거래 사고정보 해지 시 사용됩니다.</xs:documentation>
+					<xs:documentation>이상금융거래 의심정보 해지 시 사용됩니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="BehaviorType">
+		<xs:annotation>
+			<xs:documentation>이상금융거래정보 공유업무 구분을 나타내며, 등록, 수정, 해지의 3가지 업무로 구분합니다.</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="등록">
+				<xs:annotation>
+					<xs:documentation>FISS에 등록 요청을 하는 것으로 신규 이상금융거래정보 공유 요청 시 사용됩니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="수정">
+				<xs:annotation>
+					<xs:documentation>FISS에 수정 요청을 하는 것으로 수정된 이상금융거래정보 공유 요청 시 사용됩니다.</xs:documentation>
+					<xs:documentation>* 수정 업무는 수정된 새로운 이상금융거래정보를 등록 요청하는 것입니다. 이전에 등록된 이상금융거래정보는 수정이 불가능합니다.</xs:documentation>
+					<xs:documentation>* "수정" 선택 시 이전 등록된 이상금융거래정보의 SFIX ID 또는 SFIX_Data > Information > Identification 을 References에 반드시 추가하여야 합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="해지">
+				<xs:annotation>
+					<xs:documentation>FISS에 해지 요청을 하는 것으로 해지된 이상금융거래정보 공유 요청 시 사용됩니다.</xs:documentation>
+					<xs:documentation>* 해지 업무는 해지된 새로운 이상금융거래정보를 등록 요청하는 것입니다. 이전에 등록된 이상금융거래정보는 삭제가 불가능합니다.</xs:documentation>
+					<xs:documentation>* "해지"선택 시 이전 등록된 이상금융거래정보의 SFIX_ID 또는 SFIX_Data > Information > Identification 을 References에 반드시 추가하여야 합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<!-- 	SFIX_Data >	Attackers / Victims -->
+	<xs:complexType name="AttackerType">
+		<xs:annotation>
+			<xs:documentation>이상금융거래에서 악의적인 행위를 한 대상 정보로 Object로 구성되어 있습니다.</xs:documentation>
+		</xs:annotation>
+		<xs:choice minOccurs="1" maxOccurs="unbounded">
+			<xs:element name="PC" type="object:PCType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>PC 단말기 정보로 금융회사에서 작성합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="SmartPhone" type="object:SmartPhoneType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>스마트폰 단말기 정보로 금융회사에서 작성합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Tablet" type="object:TabletType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>테블릿 단말기 정보로 금융회사에서 작성합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Person" type="object:PersonType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>금융거래 사용자 정보로 금융회사에서 작성합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Company" type="object:CompanyType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>금융거래 기업 정보로 금융회사에서 작성합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:choice>
+	</xs:complexType>
+	<xs:complexType name="VictimType">
+		<xs:annotation>
+			<xs:documentation>이상금융거래에서 악의적인 행위로 피해를 받은 대상 정보로 Object로 구성되어 있습니다.</xs:documentation>
+		</xs:annotation>
+		<xs:choice minOccurs="1" maxOccurs="unbounded">
+			<xs:element name="PC" type="object:PCType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>PC 단말기 정보로 금융회사에서 작성합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="SmartPhone" type="object:SmartPhoneType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>스마트폰 단말기 정보로 금융회사에서 작성합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Tablet" type="object:TabletType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>테블릿 단말기 정보로 금융회사에서 작성합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Person" type="object:PersonType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>금융거래 사용자 정보로 금융회사에서 작성합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Company" type="object:CompanyType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>금융거래 기업 정보로 금융회사에서 작성합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:choice>
+	</xs:complexType>
+	<!-- 	SFIX_Data >	Targets -->
+	<xs:complexType name="TargetType">
+		<xs:annotation>
+			<xs:documentation>이상금융거래의 대상이 되는 정보로 Object로 구성되어 있습니다.</xs:documentation>
+		</xs:annotation>
+		<xs:choice minOccurs="1" maxOccurs="unbounded">
+			<xs:element name="Account" type="object:AccountType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>금융 계좌 정보로 금융회사에서 작성합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Card" type="object:CardType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>카드 정보로 금융회사에서 작성합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="NPKI" type="object:PKIType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>공인인증서 정보로 금융회사에서 작성합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Account_Transaction" type="object:AccountTransactionType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>금융거래 정보로 금융회사에서 작성합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Card_Transaction" type="object:CardTransactionType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>카드거래 정보로 금융회사에서 작성합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:choice>
+	</xs:complexType>
+	<!-- 	SFIX_Data >	Actions -->
+	<xs:complexType name="ActionsType">
+		<xs:annotation>
+			<xs:documentation>이상금융거래정보 행위 정보를 나타내며, 반드시 1개 이상을 선택해야 합니다.</xs:documentation>
+		</xs:annotation>
+		<xs:choice minOccurs="1" maxOccurs="unbounded">
+			<xs:element name="Action" type="sfix:ActionType" minOccurs="1" maxOccurs="unbounded"/>
+		</xs:choice>
+	</xs:complexType>
+	<xs:simpleType name="ActionType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="개인정보유출">
+				<xs:annotation>
+					<xs:documentation>이상금융거래가 개인정보유출로 확인 또는 판단되는 경우 선택합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="카드정보유출">
+				<xs:annotation>
+					<xs:documentation>이상금융거래가 카드정보유출로 확인 또는 판단되는 경우 선택합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="불법자금이체">
+				<xs:annotation>
+					<xs:documentation>이상금융거래가 불법자금이체로 확인 또는 판단되는 경우 선택합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="인터넷피싱">
+				<xs:annotation>
+					<xs:documentation>이상금융거래가 인터넷피싱으로 확인 또는 판단되는 경우 선택합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="보이스피싱">
+				<xs:annotation>
+					<xs:documentation>이상금융거래가 보이스피싱으로 확인 또는 판단되는 경우 선택합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="불법대출">
+				<xs:annotation>
+					<xs:documentation>이상금융거래가 불법대출로 확인 또는 판단되는 경우 선택합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="대포통장">
+				<xs:annotation>
+					<xs:documentation>이상금융거래가 대포통장 사용으로 확인 또는 판단되는 경우 선택합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="카드예금인출">
+				<xs:annotation>
+					<xs:documentation>이상금융거래가 불법적 카드예금인출로 확인 또는 판단되는 경우 선택합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="통장예금인출">
+				<xs:annotation>
+					<xs:documentation>이상금융거래가 불법적 통장예금인출로 확인 또는 판단되는 경우 선택합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="인증서부정발급">
+				<xs:annotation>
+					<xs:documentation>인증서부정발급이 확인 또는 판단되는 경우 선택합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="단말기접근">
+				<xs:annotation>
+					<xs:documentation>이상금융거래에 단말기 접근이 확인 또는 판단되는 경우 선택합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="악용된단말기">
+				<xs:annotation>
+					<xs:documentation>해킹 등에 의해 고객의 단말기가 악용된 후  이상금융거래에 악용된 단말기 접근이 확인 또는 판단되는 경우 선택합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="카드분실">
+				<xs:annotation>
+					<xs:documentation>이상금융거래가 카드분실로 확인 또는 판단되는 경우 선택합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<!--	SFIX_Data >	References -->
+	<xs:complexType name="ReferencesType">
+		<xs:annotation>
+			<xs:documentation>이전에 공유된 이상금융거래정보를 참조하기 위한 정보로 SFIX ID 또는 SFIX_Data > Information > Identification 을 사용합니다.</xs:documentation>
+			<xs:documentation>이상금융거래의 수정 정보 또는 해지 정보 공유 시 반드시 References에 이전에 공유된 관련 정보를 넣어야 합니다.</xs:documentation>
+		</xs:annotation>
+		<xs:choice minOccurs="0" maxOccurs="unbounded">
+			<xs:element name="Reference" type="sfixCommon:ReferenceType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>이전에 공유된 이상금융거래정보를 참조하기 위한 정보로 금융회사에서 작성합니다.</xs:documentation>
+					<xs:documentation>참조 정보는 SFIX ID 또는 SFIX_Data > Information > Identification 을 사용합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:choice>
+	</xs:complexType>
+</xs:schema>

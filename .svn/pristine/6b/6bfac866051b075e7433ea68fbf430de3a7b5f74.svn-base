@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding= "UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+ 
+<mapper namespace="nurier.scraping.setting.dao.RemoteProgramExceptionSqlMapper">
+
+    <sql id="remoteListColumn">
+    A.SEQ_NUM               AS  seqnum
+    , A.USERID              AS  userid  
+    , A.USERNAME            AS  username
+    , A.RGNAME              AS  rgname
+    , A.RGDATE              AS  rgdate
+    , A.REMOTE_PROGRAM_ID   AS  remoteprogramid
+    , B.PGMNAM              As  pgmnam
+    , B.PROCESNAM           AS  PROCESNAM
+    , B.LOCALPORT           AS  LOCALPORT
+    , B.REMOTPORT           AS  remotport
+    , B.REMARK              AS  remark
+    </sql>
+    
+    <sql id="remoteProgramColumn">
+    OID             AS  oid
+    , PGMNAM        AS  pgmnam
+    , PROCESNAM     AS  procesnam
+    , LOCALPORT     AS  localport
+    , REMOTPORT     AS  remotport
+    , REMARK        AS  remark
+    , CREATEDATE    AS  createdate
+    , CREATEUSER    AS  createuser
+    , RGIPADDR      AS  rgipaddr
+    </sql>
+    
+    <!-- 원격프로그램 예외등록 리스트 총 수 -->
+    <select id="getTotalNumberOfRecordsOfRemoteProgramList" parameterType="java.util.HashMap" resultType="int">
+        SELECT
+            COUNT(SEQ_NUM)
+        FROM NFDS_REMOTE_BLACK_EXCEPTED A INNER JOIN NFDS_REMOTE_BLACKLIST B ON A.REMOTE_PROGRAM_ID = B.OID
+        WHERE 1 = 1
+        <if test="SEARCH_USERID != null and SEARCH_USERID != '' ">
+        AND UPPER(A.USERID) = UPPER(#{SEARCH_USERID})
+        </if>
+        <if test="SEARCH_USERNAME != null and SEARCH_USERNAME != '' ">
+        AND UPPER(A.USERNAME) = UPPER(#{SEARCH_USERNAME})
+        </if>
+        <if test="SEARCH_PROCESSNAME != null and SEARCH_PROCESSNAME != '' ">
+        AND UPPER(B.PROCESNAM) = UPPER(#{SEARCH_PROCESSNAME})
+        </if>
+
+    </select>
+    
+    <!-- 원격프로그램 예외등록 페이징처리 리스트  -->
+    <select id="getRemoteProgramPagingList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        <include refid="paging.headerPagingStart"/>
+        
+        SELECT 
+        <include refid="remoteListColumn"/>
+        FROM NFDS_REMOTE_BLACK_EXCEPTED A INNER JOIN NFDS_REMOTE_BLACKLIST B ON A.REMOTE_PROGRAM_ID = B.OID
+        WHERE 1 = 1
+        <if test="SEARCH_USERID != null and SEARCH_USERID != '' ">
+        AND UPPER(A.USERID) = UPPER(#{SEARCH_USERID})
+        </if>
+        <if test="SEARCH_USERNAME != null and SEARCH_USERNAME != '' ">
+        AND UPPER(A.USERNAME) = UPPER(#{SEARCH_USERNAME})
+        </if>
+        <if test="SEARCH_PROCESSNAME != null and SEARCH_PROCESSNAME != '' ">
+        AND UPPER(B.PROCESNAM) = UPPER(#{SEARCH_PROCESSNAME})
+        </if>
+        ORDER BY RGDATE DESC
+        <include refid="paging.footerPagingEnd"/>
+        
+    </select>
+    
+    <!-- 원격프로그램 예외등록 리스트  -->
+    <select id="getRemoteProgramList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT 
+        <include refid="remoteListColumn"/>
+        FROM NFDS_REMOTE_BLACK_EXCEPTED A INNER JOIN NFDS_REMOTE_BLACKLIST B ON A.REMOTE_PROGRAM_ID = B.OID
+        WHERE 1 = 1
+        <if test="SEARCH_USERID != null and SEARCH_USERID != '' ">
+        AND UPPER(A.USERID) = UPPER(#{SEARCH_USERID})
+        </if>
+        <if test="SEARCH_USERNAME != null and SEARCH_USERNAME != '' ">
+        AND UPPER(A.USERNAME) = UPPER(#{SEARCH_USERNAME})
+        </if>
+        <if test="SEARCH_PROCESSNAME != null and SEARCH_PROCESSNAME != '' ">
+        AND UPPER(B.PROCESNAM) = UPPER(#{SEARCH_PROCESSNAME})
+        </if>
+    </select>
+    
+    <!-- 원격프로그램 예외등록 리스트 삭제 -->
+    <delete id="setRemoteProgramExceptionRemove" parameterType="String">
+        DELETE NFDS_REMOTE_BLACK_EXCEPTED
+        WHERE SEQ_NUM = #{seqNum}
+    </delete>
+    
+    <!-- 원격프로그램 예외등록 리스트 이용자 데이터 모두 삭제 -->
+    <delete id="setRemoteProgramExceptionAllRemove" parameterType="String">
+        DELETE NFDS_REMOTE_BLACK_EXCEPTED
+        WHERE USERID = #{userid}
+    </delete>
+    
+    <!-- 원격프로그램 예외등록 리스트 등록 -->
+    <insert id="setRemoteProgramExceptionInsert" parameterType="java.util.HashMap">
+        <selectKey resultType="String" keyProperty="seq_num" order="BEFORE">
+            SELECT NVL(MAX(SEQ_NUM),0)+1 seq_num FROM NFDS_REMOTE_BLACK_EXCEPTED
+        </selectKey>
+        INSERT INTO NFDS_REMOTE_BLACK_EXCEPTED (
+            SEQ_NUM,
+            USERID,
+            USERNAME,
+            RGNAME,
+            RGDATE,
+            MODNAME,
+            MODDATE,
+            REMOTE_PROGRAM_ID
+        ) VALUES (
+            #{seq_num},
+            #{USERID},
+            #{USERNAME},
+            #{RGNAME},
+            #{MODNAME},
+            #{MODDATE},
+            TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'),
+            #{REMOTE_PROGRAM_ID}
+        )
+    </insert>
+    
+    <!-- 원격프로그램 예외등록 리스트 최초등록 -->
+    <insert id="setRemoteProgramExceptionFirstInsert" parameterType="java.util.HashMap">
+        <selectKey resultType="String" keyProperty="seq_num" order="BEFORE">
+            SELECT NVL(MAX(SEQ_NUM),0)+1 seq_num FROM NFDS_REMOTE_BLACK_EXCEPTED
+        </selectKey>
+        INSERT INTO NFDS_REMOTE_BLACK_EXCEPTED (
+            SEQ_NUM,
+            USERID,
+            USERNAME,
+            RGNAME,
+            RGDATE,
+            REMOTE_PROGRAM_ID
+        ) VALUES (
+            #{seq_num},
+            #{USERID},
+            #{USERNAME},
+            #{RGNAME},
+            TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'),
+            #{REMOTE_PROGRAM_ID}
+        )
+    </insert>
+
+    <!-- 원격프로그램 예외등록 리스트 수정등록 -->
+    <insert id="setRemoteProgramExceptionModify" parameterType="java.util.HashMap">
+        <selectKey resultType="String" keyProperty="seq_num" order="BEFORE">
+            SELECT NVL(MAX(SEQ_NUM),0)+1 seq_num FROM NFDS_REMOTE_BLACK_EXCEPTED
+        </selectKey>
+        INSERT INTO NFDS_REMOTE_BLACK_EXCEPTED (
+            SEQ_NUM,
+            USERID,
+            USERNAME,
+            RGNAME,
+            RGDATE,
+<!--             MODNAME, -->
+<!--             MODDATE, -->
+            REMOTE_PROGRAM_ID
+        ) VALUES (
+            #{seq_num},
+            #{USERID},
+            #{USERNAME},
+            #{RGNAME},
+            TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'),
+<!--             #{MODNAME}, -->
+<!--             TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), -->
+            #{REMOTE_PROGRAM_ID}
+        )
+    </insert>
+
+    <!-- 원격프로그램리스트  coherencedata 리스트-->
+    <select id="getRemoteProgram" parameterType="String" resultType="java.util.HashMap">
+        SELECT
+        <include refid="remoteProgramColumn"/>
+        FROM NFDS_REMOTE_BLACKLIST
+        WHERE OID = #{oid}
+    </select>
+
+    <!-- 원격프로그램리스트  리스트-->
+    <select id="getListOfRemotePrograms" resultType="java.util.HashMap">
+        SELECT
+        <include refid="remoteProgramColumn"/>
+        FROM
+            NFDS_REMOTE_BLACKLIST
+        ORDER BY CREATEDATE DESC
+    </select>
+    
+</mapper>

@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding= "UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+ 
+<mapper namespace="nurier.scraping.setting.dao.SettingMenuDataManageSqlMapper">
+    
+    <select id="getMenuDataListL" parameterType="menuDataVO" resultType="menuDataVO">
+        SELECT M.*,
+            (SELECT MNUNAM
+            FROM NPAS_MENU
+            WHERE MNUCOD = M.PARENT
+            GROUP BY MNUNAM) CODNAME
+        FROM NPAS_MENU M
+        START WITH LENGTH(MNUCOD) = 3
+        CONNECT BY PRIOR MNUCOD = PARENT
+        ORDER BY TO_NUMBER(ORDRNO), MNUCOD, LEVEL 
+    </select>
+    <select id="getMenuDataListR" parameterType="menuDataVO" resultType="menuDataVO">
+        SELECT M.*,
+            (SELECT MNUNAM
+            FROM NPAS_MENU
+            WHERE MNUCOD = M.PARENT
+            GROUP BY MNUNAM) CODNAME
+        FROM NPAS_MENU M
+        WHERE PARENT = '000'
+        START WITH LENGTH(MNUCOD) = 3
+        CONNECT BY PRIOR MNUCOD = PARENT
+        ORDER BY TO_NUMBER(ORDRNO)
+    </select>
+    
+    <select id="getMenuDataSelect" parameterType="menuDataVO" resultType="menuDataVO">
+        SELECT M.*,
+            (SELECT MNUNAM
+            FROM NPAS_MENU
+            WHERE MNUCOD = M.PARENT
+            GROUP BY MNUNAM) CODNAME
+        FROM NPAS_MENU M
+        WHERE PARENT = #{parent}
+        ORDER BY TO_NUMBER(ORDRNO)
+    </select>
+    
+    <select id="getMainMenuList" parameterType="menuDataVO" resultType="menuDataVO">
+        SELECT M.*,
+            (SELECT MNUNAM
+            FROM NPAS_MENU
+            WHERE MNUCOD = M.PARENT
+            GROUP BY MNUNAM) CODNAME
+        FROM NPAS_MENU M
+        WHERE IS_USED = 'Y'
+        AND M.MNUCOD IN (SELECT AR.MNUCOD
+                         FROM NFDS_USER U, NPAS_USER_MENU_AUTH AR
+                         WHERE U.USER_ID = #{user_id}
+                         AND U.GROUP_CODE = AR.GROUP_CODE
+                        )
+        START WITH LENGTH(MNUCOD) = 3
+        CONNECT BY PRIOR MNUCOD = PARENT
+        ORDER BY TO_NUMBER(ORDRNO), MNUCOD, LEVEL
+    </select>
+
+    <select id="getMenuDataListUsed" parameterType="menuDataVO" resultType="menuDataVO">
+        SELECT *
+        FROM NPAS_MENU
+        WHERE IS_USED = 'Y'
+    </select>
+
+    <select id="getMenuMaxCode" parameterType="menuDataVO" resultType="java.util.HashMap">
+        SELECT DECODE(LPAD(TO_CHAR(MAX(MNUCOD) + 1), #{parentlen}, '0'), null, 
+                        <if test='parent != ""'>
+                        CONCAT(#{parent},'001'), 
+                        </if>
+                        <if test='parent == ""'>
+                        '001', 
+                        </if>
+                        LPAD(TO_CHAR(MAX(MNUCOD) + 1), #{parentlen}, '0')) MNUCOD_MAX,
+                        
+               MAX((SELECT MAX(TO_NUMBER(ORDRNO)) + 1
+                    FROM NPAS_MENU
+                    <if test='parent != ""'>
+                    WHERE PARENT = #{parent}
+                    </if>
+                    <if test='parent == ""'>
+                    WHERE PARENT = '000'
+                    </if>
+                )) ORDRNO_MAX 
+        FROM NPAS_MENU
+        WHERE LENGTH(MNUCOD) = #{parentlen}
+        <if test='parent != ""'>
+        AND MNUCOD LIKE CONCAT(#{parent},'%')
+        </if> 
+    </select>
+
+
+    <select id="getMenuDataInfo" parameterType="menuDataVO" resultType="menuDataVO">
+        SELECT *
+        FROM NPAS_MENU
+        WHERE SEQ_NUM = #{seq_num}
+    </select>
+    
+    <insert id="setMenuDataInsert" parameterType="menuDataVO">
+        <selectKey resultType="String" keyProperty="seq_num" order="BEFORE">
+            SELECT NVL(MAX(SEQ_NUM),0)+1 as seq_num FROM NPAS_MENU
+        </selectKey>
+       
+        INSERT INTO NPAS_MENU (
+            SEQ_NUM,
+            MNUCOD,
+            MNUNAM,
+            MNUGBN,
+            EXECNM,
+            ICONPT,
+            PARENT,
+            ORDRNO,
+            REMARK,
+            IS_USED
+        ) VALUES (
+            #{seq_num},
+            #{mnucod},
+            #{mnunam},
+            #{mnugbn},
+            #{execnm},
+            #{iconpt},
+            #{parent},
+            #{ordrno},
+            #{remark},
+            #{is_used}
+        )
+    </insert>
+
+    <update id="setMenuDataUpdate" parameterType="menuDataVO">
+        UPDATE NPAS_MENU SET
+              MNUCOD           = #{mnucod}
+            , MNUNAM           = #{mnunam}
+            , MNUGBN           = #{mnugbn}
+            , PARENT           = #{parent}
+            , EXECNM           = #{execnm}
+            , ICONPT           = #{iconpt}
+            , ORDRNO           = #{ordrno}
+            , REMARK           = #{remark}
+            , IS_USED          = #{is_used}  
+            
+        WHERE SEQ_NUM = #{seq_num}
+    </update>
+    <update id="setMenuOrdrUpdate" parameterType="menuDataVO">
+        UPDATE NPAS_MENU SET
+            ORDRNO = ORDRNO + 1
+        WHERE PARENT = #{parent}
+        AND ORDRNO >= #{ordrno}
+    </update>
+    
+    <delete id="setMenuDataDelete" parameterType="menuDataVO">
+        DELETE FROM NPAS_MENU
+        WHERE SEQ_NUM = #{seq_num}
+    </delete>
+    
+    <!-- 부모의 메뉴코드 반환 -->
+    <select id="getMenuNameAndMenuCodeOfParent" parameterType="string" resultType="java.util.HashMap">
+        <![CDATA[
+        SELECT
+            MNUNAM AS MENU_NAME,
+            PARENT AS PARENT_MENU_CODE
+        FROM
+            NPAS_MENU
+        WHERE
+            MNUCOD = #{menuCode}
+        ]]>
+    </select>
+    
+    
+    <!-- 실행기능(링크처리)이 있는 메뉴만 반환 -->
+    <select id="getListOfExecutableMenus" resultType="java.util.HashMap">
+        <![CDATA[
+        SELECT
+            MNUCOD,
+            MNUNAM
+        FROM
+            NPAS_MENU
+        WHERE
+            MNUCOD NOT IN (SELECT DISTINCT PARENT FROM NPAS_MENU)
+        ORDER BY
+            MNUNAM ASC
+        ]]>
+    </select>
+    
+    
+    <!-- 해당 URL 의 menu code 값을 반환 (scseo) -->
+    <select id="getMenuCodeOfUrl" parameterType="string" resultType="string">
+        <![CDATA[
+        SELECT
+            MNUCOD
+        FROM 
+            NPAS_MENU
+        WHERE
+            EXECNM = #{url} AND ROWNUM = 1
+        ]]>
+    </select>
+    
+    
+    <!-- 해당 메뉴의 사용권한을 가진 사용자그룹들을 반환 (scseo) -->
+    <select id="getListOfUserGroupsAllowedToUseMenu" parameterType="string" resultType="string">
+        <![CDATA[
+        SELECT
+            (SELECT GROUP_NAME FROM NFDS_USER_GROUP WHERE GROUP_CODE = MA.GROUP_CODE) AS GROUP_NAME
+        FROM 
+            NPAS_USER_MENU_AUTH MA
+        WHERE
+            MNUCOD = #{menuCode}
+        ]]>
+    </select>
+    
+</mapper>

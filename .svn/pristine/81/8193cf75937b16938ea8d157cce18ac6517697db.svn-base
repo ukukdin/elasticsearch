@@ -1,0 +1,1072 @@
+package Jeonmoon;
+
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.http.HttpHost;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.client.CredentialsProvider;
+import org.apache.http.impl.client.BasicCredentialsProvider;
+import org.elasticsearch.ElasticsearchException;
+import org.elasticsearch.action.ActionListener;
+import org.elasticsearch.action.DocWriteResponse;
+import org.elasticsearch.action.admin.cluster.repositories.delete.DeleteRepositoryRequest;
+import org.elasticsearch.action.admin.cluster.repositories.get.GetRepositoriesRequest;
+import org.elasticsearch.action.admin.cluster.repositories.get.GetRepositoriesResponse;
+import org.elasticsearch.action.admin.cluster.repositories.put.PutRepositoryRequest;
+import org.elasticsearch.action.admin.cluster.snapshots.create.CreateSnapshotRequest;
+import org.elasticsearch.action.admin.cluster.snapshots.create.CreateSnapshotResponse;
+import org.elasticsearch.action.admin.cluster.snapshots.delete.DeleteSnapshotRequest;
+import org.elasticsearch.action.admin.cluster.snapshots.get.GetSnapshotsRequest;
+import org.elasticsearch.action.admin.cluster.snapshots.get.GetSnapshotsResponse;
+import org.elasticsearch.action.admin.cluster.snapshots.restore.RestoreSnapshotRequest;
+import org.elasticsearch.action.admin.cluster.snapshots.restore.RestoreSnapshotResponse;
+import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
+import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
+import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
+import org.elasticsearch.action.admin.indices.open.OpenIndexRequest;
+import org.elasticsearch.action.admin.indices.open.OpenIndexResponse;
+import org.elasticsearch.action.admin.indices.refresh.RefreshRequest;
+import org.elasticsearch.action.admin.indices.refresh.RefreshResponse;
+import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateRequest;
+import org.elasticsearch.action.bulk.BulkRequest;
+import org.elasticsearch.action.bulk.BulkResponse;
+import org.elasticsearch.action.delete.DeleteRequest;
+import org.elasticsearch.action.delete.DeleteResponse;
+import org.elasticsearch.action.get.GetRequest;
+import org.elasticsearch.action.get.GetResponse;
+import org.elasticsearch.action.index.IndexRequest;
+import org.elasticsearch.action.index.IndexResponse;
+import org.elasticsearch.action.search.ClearScrollRequest;
+import org.elasticsearch.action.search.MultiSearchRequest;
+import org.elasticsearch.action.search.MultiSearchResponse;
+import org.elasticsearch.action.search.MultiSearchResponse.Item;
+import org.elasticsearch.action.search.SearchRequest;
+import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.action.support.IndicesOptions;
+import org.elasticsearch.action.support.master.AcknowledgedResponse;
+import org.elasticsearch.action.update.UpdateRequest;
+import org.elasticsearch.action.update.UpdateResponse;
+import org.elasticsearch.client.RequestOptions;
+import org.elasticsearch.client.RestClient;
+import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.client.core.CountRequest;
+import org.elasticsearch.client.core.CountResponse;
+import org.elasticsearch.client.indices.CloseIndexRequest;
+import org.elasticsearch.client.indices.CloseIndexResponse;
+import org.elasticsearch.client.indices.GetIndexRequest;
+import org.elasticsearch.cluster.metadata.RepositoryMetadata;
+import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.unit.TimeValue;
+import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.common.xcontent.XContentFactory;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.repositories.fs.FsRepository;
+import org.elasticsearch.rest.RestStatus;
+import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.SearchHits;
+import org.elasticsearch.search.aggregations.AggregationBuilder;
+import org.elasticsearch.search.builder.SearchSourceBuilder;
+import org.elasticsearch.search.sort.FieldSortBuilder;
+import org.elasticsearch.search.sort.SortOrder;
+import org.elasticsearch.snapshots.SnapshotInfo;
+
+
+public class ElasticsearchService {
+
+	private ArrayList<String> ipList;
+	private ArrayList<Integer> portList;
+	public ElasticsearchService(ArrayList<String> ipList, ArrayList<Integer> portList){
+		this.ipList = ipList;
+		this.portList = portList;
+	
+	}
+	/**
+	 * RestHighLevelClient create
+	 * 클러스터 연결을 위한 client 생성, ip와 port 정보가 필요하고 보안설정 할 시 id/pw 필요
+	 * 클러스터에 검색이나 집계등을 요청 할 때 마다 생성하고 close 필요
+	 * @return
+	 */
+	public RestHighLevelClient getClient(){
+		ArrayList<HttpHost> hostList = new ArrayList<HttpHost>();
+		// es의 ip,port로 HttpHost 객체 생성  (클러스터 환경일 경우 list)
+		for(int i=0;i<this.ipList.size();i++){
+			HttpHost host = new HttpHost(this.ipList.get(i), this.portList.get(i), "http");
+			hostList.add(host);
+		}
+		
+		// 사용자 인증 추가, ES/Kibana 양쪽에서 쓰이는 인증 정보
+		final CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
+		credentialsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials("elastic", "OlKEMdR51j8yYZ1fBFIp"));
+		
+		// 위에서 생성한 HttpHost객체로 client 생성
+//		RestHighLevelClient client = new RestHighLevelClient(RestClient.builder(
+//				hostList.toArray(new HttpHost[hostList.size()])).setHttpClientConfigCallback(new HttpClientConfigCallback() {
+//			
+//			public HttpAsyncClientBuilder customizeHttpClient(HttpAsyncClientBuilder httpClientBuilder) {
+//				// TODO Auto-generated method stub
+//				return httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider);
+//			}
+//		}));
+		RestHighLevelClient	client = new RestHighLevelClient(RestClient.builder(new HttpHost("192.168.0.43",9203,"http")));
+		return client;
+	}
+	/*인스펙션로그*/
+	
+	public boolean inspectionLog() throws Exception {
+		PutIndexTemplateRequest request = new PutIndexTemplateRequest("inspectionlog");
+		request.settings(Settings.builder().put("index.number_of_shards", 3).put("index.number_of_replicas", 1)
+				.put("refresh_interval", "5s") // 짧으면 disk I/O 자주 일어나서 성능 떨어지고, 길면 검색 성능에 영향을 미침.
+		);
+		List<String> list = new ArrayList<String>();
+		list.add("inspection*");
+		request.patterns(list);
+		XContentBuilder indexBuilder = XContentFactory.jsonBuilder();
+		indexBuilder.startObject().startObject("properties").startObject("action").field("type", "keyword")
+				.endObject().startObject("logDateTime").field("type", "date")
+				.field("format", "yyyy-MM-dd HH:mm:ss.SSS").endObject().startObject("content")
+				.field("type", "keyword").endObject().startObject("ipAddress")
+				.field("type", "keyword").endObject().startObject("menuName")
+				.field("type", "keyword").endObject().startObject("menuPath")
+				.field("type", "keyword").endObject().startObject("userId")
+				.field("type", "keyword").endObject().endObject().endObject();
+		request.mapping("_doc", indexBuilder);
+		AcknowledgedResponse putTemplateResponse = getClient().indices().putTemplate(request, RequestOptions.DEFAULT);
+		boolean acknowledged = putTemplateResponse.isAcknowledged();
+		return acknowledged;
+	}
+	//				.field("type", "keyword").endObject().startObject("pc_cpuID").field("type", "keyword").endObject()
+
+	public boolean callcenterlog() throws Exception {
+		PutIndexTemplateRequest request = new PutIndexTemplateRequest("callcenterlog");
+		request.settings(Settings.builder().put("index.number_of_shards", 3).put("index.number_of_replicas", 1)
+				.put("refresh_interval", "5s") // 짧으면 disk I/O 자주 일어나서 성능 떨어지고, 길면 검색 성능에 영향을 미침.
+		);
+		List<String> list = new ArrayList<String>();
+		list.add("*callcenter_log*");
+		request.patterns(list);
+		XContentBuilder indexBuilder = XContentFactory.jsonBuilder();
+		indexBuilder.startObject().startObject("properties").startObject("agentId").field("type", "keyword").field("index", false).endObject()
+				.startObject("logDateTime").field("type", "date").field("format", "yyyy-MM-dd HH:mm:ss.SSS").endObject()
+				.startObject("agentIp").field("type", "keyword").endObject()
+				.startObject("bankingType").field("type", "keyword").endObject()
+				.startObject("customerId").field("type", "keyword").endObject()
+				.startObject("dateOfRelease").field("type", "date").field("format", "yyyy-MM-dd HH:mm:ss.SSS").endObject()
+				.startObject("lastDateTimeOfFdsDtl").field("type", "date").field("format", "yyyy-MM-dd HH:mm:ss.SSS").endObject()
+				.startObject("logIdsOfFdsMst").field("type", "keyword").endObject()
+				.startObject("releaseExecuted").field("type", "keyword").endObject()
+				.startObject("phoneKey").field("type", "keyword").endObject().endObject().endObject();
+		request.mapping("_doc", indexBuilder);
+		AcknowledgedResponse putTemplateResponse = getClient().indices().putTemplate(request, RequestOptions.DEFAULT);
+		boolean acknowledged = putTemplateResponse.isAcknowledged();
+		return acknowledged;
+	}
+	
+	public boolean callcenterComment() throws Exception {
+		PutIndexTemplateRequest request = new PutIndexTemplateRequest("callcenter_comment");
+		request.settings(Settings.builder().put("index.number_of_shards", 3).put("index.number_of_replicas", 1)
+				.put("refresh_interval", "5s") // 짧으면 disk I/O 자주 일어나서 성능 떨어지고, 길면 검색 성능에 영향을 미침.
+		);
+		List<String> list = new ArrayList<String>();
+		list.add("*callcenter_comment*");
+		request.patterns(list);
+		XContentBuilder indexBuilder = XContentFactory.jsonBuilder();
+		indexBuilder.startObject().startObject("properties").startObject("bankingUserId").field("type", "keyword").field("index", false).endObject()
+				.startObject("logDateTime").field("type", "date").field("format", "yyyy-MM-dd HH:mm:ss.SSS").endObject()
+				.startObject("civilComplaint").field("type", "keyword").endObject()
+				.startObject("comment").field("type", "keyword").endObject()
+				.startObject("commentTypeCode").field("type", "keyword").endObject()
+				.startObject("commentTypeCode1").field("type", "keyword").endObject()
+				.startObject("commentTypeCode2").field("type", "keyword").endObject()
+				.startObject("commentTypeCode3").field("type", "keyword").endObject()
+				.startObject("commentTypeName").field("type", "keyword").endObject()
+				.startObject("commentTypeName1").field("type", "keyword").endObject()
+				.startObject("commentTypeName2").field("type", "keyword").endObject()
+				.startObject("commentTypeName3").field("type", "keyword").endObject()
+				.startObject("docIdOfLog").field("type", "keyword").endObject()
+				.startObject("docTypeOfLog").field("type", "keyword").endObject()
+				.startObject("indexNameOfLog").field("type", "keyword").endObject()
+				.startObject("processState").field("type", "keyword").endObject()
+				.startObject("registrant").field("type", "keyword").endObject()
+				.startObject("registrantIpAddress").field("type", "keyword").endObject().endObject().endObject();
+		request.mapping("_doc", indexBuilder);
+		AcknowledgedResponse putTemplateResponse = getClient().indices().putTemplate(request, RequestOptions.DEFAULT);
+		boolean acknowledged = putTemplateResponse.isAcknowledged();
+		return acknowledged;
+	}
+	
+	public RestHighLevelClient getBackUpClient() {
+		RestHighLevelClient client = new RestHighLevelClient(RestClient.builder(new HttpHost("192.168.0.201", 9210, "http")));
+		return client;
+	}
+	
+	/**
+	 * create index-request
+	 * @param indexName
+	 * @param map 
+	 * @return
+	 */
+	public IndexRequest getIndexRequest(String indexName, Map<String, Object> map, String id){
+		IndexRequest request = new IndexRequest(indexName).source(getXContentBuilder(map)).id(id);		
+		return request;
+	}
+	
+	public IndexRequest getIndexRequest(String indexName, Map<String, Object> map){
+		IndexRequest request = new IndexRequest(indexName).source(getXContentBuilder(map));		
+		return request;
+	}
+	
+	
+	/**
+	 * 인덱스 레플리카/샤드 개수 지정하여 만들기
+	 * */
+	
+		public void createIndex(String indexName) throws Exception{
+			CreateIndexRequest request = new CreateIndexRequest(indexName);
+			request.settings(Settings.builder()
+					.put("index.number_of_shards",3)
+					.put("index.number_of_replicas",1));
+			RestHighLevelClient client = getClient();
+			CreateIndexResponse createIndexResponse = client.indices().create(request, RequestOptions.DEFAULT);
+			
+			boolean acknowledged = createIndexResponse.isAcknowledged(); 
+			boolean shardsAcknowledged = createIndexResponse.isShardsAcknowledged(); 
+		}
+	
+	
+	/**
+	 * index명을 전달 받아서 존재하는 index 인지 확인, true/false로 리턴
+	 * @param indexName
+	 * @return
+	 * @throws Exception 
+	 */
+	public boolean isExistsIndex(String indexName) {
+		GetIndexRequest request = new GetIndexRequest(indexName);
+		RestHighLevelClient client = getClient();
+		boolean exists = false;
+		try {
+			exists = client.indices().exists(request, RequestOptions.DEFAULT);
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			if(client != null){
+				try {
+					client.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		return exists;
+	}
+	
+	/**
+	 * index에 1건의 데이터 추가
+	 * @param indexName
+	 * @param map (elastic json format data)
+	 * @param timeoutOfMillis
+	 */
+	public void insertRequest(String indexName, HashMap<String, Object> map, int timeoutOfMillis){
+		IndexRequest request = getIndexRequest(indexName, map);
+		request.timeout(TimeValue.timeValueMillis(timeoutOfMillis));
+		final RestHighLevelClient client = getClient();
+		ActionListener<IndexResponse> listener = new ActionListener<IndexResponse>() {
+			
+			public void onResponse(IndexResponse response) {
+				try {
+					if(client != null)
+						client.close();
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+			
+			public void onFailure(Exception exception) {
+				try {
+					exception.printStackTrace();
+					if(client != null)
+						client.close();
+				} catch (Exception ef) {
+					ef.printStackTrace();
+				}
+			}
+		};
+		// index request에 대해 비동기 호출
+		client.indexAsync(request, RequestOptions.DEFAULT, listener);
+	}
+	
+	/**
+	 * es id로 1건 조회 (여러건 조회는 Multi-Get API 사용 해야 함)
+	 * @param indexName
+	 * @param docId
+	 */
+	public Map<String, Object> getRequestOfid(String indexName, String docId){
+		GetRequest getRequest = new GetRequest(indexName, docId);
+		final RestHighLevelClient client = getClient();
+		
+		GetResponse response = null;
+		try {
+			response = client.get(getRequest, RequestOptions.DEFAULT);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} finally {
+			try {
+				client.close();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		Map<String, Object> sourceAsMap = response != null ? response.getSourceAsMap() : null;
+		
+		return sourceAsMap;
+	}
+	
+	/**
+	 * es id로 1건 삭제
+	 * @param indexName
+	 * @param docId
+	 */
+	public boolean deleteOfid(String indexName, String docId){
+		DeleteRequest request = new DeleteRequest(indexName, docId);
+		final RestHighLevelClient client = getClient();
+		
+		DeleteResponse response = null;
+		try{
+			response = client.delete(request, RequestOptions.DEFAULT);
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			try{
+				client.close();
+			} catch (Exception e){
+				e.printStackTrace();
+			}
+		}
+		
+		if (response.getResult() == DocWriteResponse.Result.DELETED) 
+		    return true;
+		else
+			return false;
+		
+	}
+	
+	/**
+	 * es id로 1건 업데이트
+	 * @param indeName
+	 * @param docId
+	 * @param map
+	 */
+	public boolean updateOfid(String indexName, String docId, Map<String, Object> map){
+		UpdateRequest request = new UpdateRequest(indexName, docId).doc(map);
+		final RestHighLevelClient client = getClient();
+		
+		UpdateResponse response = null;
+		try {
+			response = client.update(request, RequestOptions.DEFAULT);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} finally {
+			try{
+				client.close();
+			} catch (Exception e){
+				e.printStackTrace();
+			}
+		}
+		
+		if (response != null && response.getResult() == DocWriteResponse.Result.UPDATED) 
+		    return true;
+		else
+			return false;
+	}
+	/**	/**
+	 * create index-request
+	 * @param indexName
+	 * @param map 
+	 * @return
+	
+	public IndexRequest getIndexRequest(String indexName, Map<String, Object> map, String id){
+		IndexRequest request = new IndexRequest(indexName).source(getXContentBuilder(map)).id(id);		
+		return request;
+	}
+	*/
+	/**
+	 * index애 여러 건 데이터 추가 요청, bulk
+	 * @param req (requests)
+	 * @param timeoutOfMillis
+	 */
+	public void bulkRequest(ArrayList<IndexRequest> req, int timeoutOfMillis){
+		BulkRequest request = new BulkRequest();
+		for(IndexRequest indexReq : req)
+			request.add(indexReq);
+			
+		request.timeout(TimeValue.timeValueMillis(timeoutOfMillis));
+		
+		final RestHighLevelClient client = getClient();
+		ActionListener<BulkResponse> listener = new ActionListener<BulkResponse>() {
+
+			public void onResponse(BulkResponse response) {
+				try {
+					client.close();
+					//System.out.println("bulk 완료");
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+
+			public void onFailure(Exception e) {
+				try {
+					client.close();
+				} catch (Exception e1) {
+					e1.printStackTrace();
+				}		
+			}
+		};
+		client.bulkAsync(request, RequestOptions.DEFAULT, listener);		
+	}
+	
+	public boolean bulkTest() throws Exception{
+		final RestHighLevelClient client = getClient();
+		BulkRequest request = new BulkRequest();
+		
+		Map<String, Object> map = new HashMap<String, Object>();
+		map.put("prod_name", "칫솔");
+		map.put("prod_num", "10");
+		Map<String, Object> map1 = new HashMap<String, Object>();
+		map.put("prod_name", "시스템");
+		map.put("prod_num", "11");
+		Map<String, Object> map2 = new HashMap<String, Object>();
+		map.put("prod_name", "Jung");
+		map.put("prod_num", "102");
+		Map<String, Object> map3 = new HashMap<String, Object>();
+		List<Map<String, Object>>list = new ArrayList<Map<String,Object>>();
+		map.put("prod_num", "2011");
+		map.put("prod_name", "휴지통");
+		map.put("response", list);
+		list.add(map2);
+		request.add(getIndexRequest("product_detail_test1",map,"1"));
+		request.add(getIndexRequest("product_detail_test1",map1,"2"));
+		request.add(getIndexRequest("product_detail_test1",map2,"3"));
+		request.add(getIndexRequest("product_detail_test1",map3,"4"));
+		BulkResponse rsp = client.bulk(request, RequestOptions.DEFAULT);
+		return !rsp.hasFailures();
+	}
+		
+	public Map<String,Object> searchRequest(boolean isBackup, String[] indexNames, QueryBuilder query, int page, int size, int timeoutOfMillis, 
+			boolean useSort, String sortField, SortOrder order, AggregationBuilder... aggBuilder) throws Exception {
+		printTime("search start");
+		//int scroll_size = 10000;
+		//final Scroll scroll = new Scroll(TimeValue.timeValueMinutes(5));
+		
+		SearchRequest searchRequest = new SearchRequest(indexNames); 
+		
+		SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder(); 
+		searchSourceBuilder.query(query); 
+		searchSourceBuilder.from((page-1)*size);
+		searchSourceBuilder.size(10000);		
+		searchSourceBuilder.timeout(TimeValue.timeValueMillis(timeoutOfMillis));
+		
+		// sort use check
+		if(useSort){
+			searchSourceBuilder.sort(new FieldSortBuilder(sortField).order(order));
+		}
+		
+		// agg use check
+		if(aggBuilder != null){
+			for (int i = 0; i < aggBuilder.length; i++) {
+				searchSourceBuilder.aggregation(aggBuilder[i]);
+			}
+		}
+		
+		//searchRequest.scroll(scroll);
+		searchRequest.source(searchSourceBuilder); 
+		
+		RestHighLevelClient client = null;
+		if(isBackup)
+			client = getBackUpClient();
+		else 
+			client = getClient();
+		printTime("client create");
+		Map<String,Object> searchResult = new HashMap<String, Object>();
+		try {
+			ArrayList<Map<String,Object>> dataArray = new ArrayList<Map<String,Object>>();
+			SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);	// 검색 요청
+
+			printTime("search call end");
+			if(searchResponse != null){
+				
+				if(aggBuilder != null){
+					searchResult.put("agg", searchResponse.getAggregations());
+				}
+				
+				SearchHits hits = searchResponse.getHits();
+				
+				searchResult.put("rsp_time", searchResponse.getTook());
+				if(hits != null && hits.getTotalHits() != null)
+					searchResult.put("rsp_hits", hits.getTotalHits().value);
+				
+				SearchHit[] searchHits = hits.getHits();
+				
+				for (SearchHit hit : searchHits) {							
+					Map<String,Object> sourceAsMap = hit.getSourceAsMap();
+					
+					if(sourceAsMap != null){
+						sourceAsMap.put("doc_id", hit.getId());
+						sourceAsMap.put("indexname", hit.getIndex());
+					}
+					
+					dataArray.add(sourceAsMap);							
+				}
+				
+				searchResult.put("rsp_data", dataArray);				
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			if(client != null)
+				client.close();
+		}
+		printTime("search end");
+		return searchResult;
+	}
+	
+	/*검색 기능 추가
+	 * 
+	 * */
+	public List<Map<String, Object>> multisearch(String indexName,String indexName2,QueryBuilder query,QueryBuilder query2) throws Exception {
+		MultiSearchRequest requests = new MultiSearchRequest();
+		SearchRequest searchRequest = new SearchRequest(indexName); 
+		SearchRequest searchRequest2 = new SearchRequest(indexName2); 
+		//Using Search Source Builder
+		SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
+		
+		sourceBuilder.from(0); 
+		sourceBuilder.size(500); 
+
+		SearchSourceBuilder sourceBuilder2 = new SearchSourceBuilder(); 
+		
+		sourceBuilder2.from(0); 
+		sourceBuilder2.size(500); 
+		sourceBuilder.query(query);
+		sourceBuilder2.query(query2);
+		//Add Builder to Search Request
+		searchRequest.source(sourceBuilder);
+		searchRequest2.source(sourceBuilder2);
+		requests.add(searchRequest);
+		requests.add(searchRequest2);
+
+
+		//Execution(Sync)
+		try {
+			RestHighLevelClient client = getClient();
+			MultiSearchResponse searchResponse = client.msearch(requests, RequestOptions.DEFAULT);
+			List<Map<String, Object>> arrList = new ArrayList<>();
+			for(Item i:searchResponse.getResponses())
+			{	
+
+				for(SearchHit s:i.getResponse().getHits().getHits())
+				{
+					Map<String, Object>
+					sourceMap = s.getSourceAsMap();
+					//					  System.out.println(sourceMap);
+					arrList.add(sourceMap);
+
+				}
+			}
+			return arrList;
+		} catch (IOException e) {
+			System.err.println("Elastic search fail");
+		}
+		return null;
+
+	}
+	/**
+	 * query 결과에 해당하는 data 갯수 리턴
+	
+	 */
+	public long getDocCount(String[] indexNames, QueryBuilder query) {
+		long count = 0;
+		RestHighLevelClient client = getClient();
+		CountRequest countRequest = new CountRequest(indexNames); 
+		SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder(); 
+		searchSourceBuilder.query(query); 
+		countRequest.source(searchSourceBuilder); 
+		try{
+			CountResponse countResponse = client.count(countRequest, RequestOptions.DEFAULT);
+			count = countResponse.getCount();
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally{
+			if(client != null)
+				try {
+					client.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+		}
+		return count;
+	}
+	
+	/**
+	 * index delete 
+	 * @param indexNames
+	 * @throws Exception
+	 */
+	public boolean deleteIndex(String[] indexNames) {
+		RestHighLevelClient client = getClient();
+		try {			
+		    DeleteIndexRequest request = new DeleteIndexRequest(indexNames);
+		    client.indices().delete(request, RequestOptions.DEFAULT);
+		} catch (ElasticsearchException exception) {
+		    if (exception.status() == RestStatus.NOT_FOUND) {
+		        
+		    }
+		    return false;
+		} catch (Exception e){
+			e.printStackTrace();
+		} finally {
+			if(client != null){
+				try {
+					client.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		return true;
+	}
+	
+	/**
+	 * open index
+	 * @param indexNames
+	 * @throws Exception
+	 */
+	public boolean openIndex(String[] indexNames) {
+		RestHighLevelClient client = getClient();
+		boolean isAck = false;
+		try{
+			OpenIndexRequest request = new OpenIndexRequest(indexNames); 
+			OpenIndexResponse rsp = client.indices().open(request, RequestOptions.DEFAULT);
+			isAck = rsp.isAcknowledged();
+		} catch (Exception e){
+			e.printStackTrace();
+			return false;
+		} finally {
+			if(client != null){
+				try {
+					client.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		return isAck;
+	}
+	
+	/**
+	 * close index
+	 * @param indexNames
+	 * @throws Exception
+	 */
+	public boolean closeIndex(String[] indexNames) {
+		RestHighLevelClient client = getClient();
+		boolean isAck = false;
+		try{
+			CloseIndexRequest request = new CloseIndexRequest(indexNames); 
+			CloseIndexResponse res = client.indices().close(request, RequestOptions.DEFAULT);
+			isAck = res.isAcknowledged();
+		} catch (Exception e){
+			e.printStackTrace();
+			return false;
+		} finally {
+			if(client != null){
+				try {
+					client.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		return isAck;
+	}
+	
+	/**
+	 * refresh index
+	 * @param indexNames
+	 * @throws Exception
+	 */
+	public boolean refreshIndex(String[] indexNames) {
+		RestHighLevelClient client = getClient();
+		RefreshRequest request = new RefreshRequest(indexNames);
+
+		try {
+			RefreshResponse rsp = client.indices().refresh(request, RequestOptions.DEFAULT);	
+		} catch (Exception e) {
+			e.printStackTrace();
+			return false;
+		} finally {
+			if(client != null){
+				try {
+					client.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		return true;
+	}
+	
+	public XContentBuilder getXContentBuilder(Map<String, Object> map){
+    	XContentBuilder builder = null;
+		try {
+			builder = XContentFactory.jsonBuilder();
+			builder.startObject();
+	    	{
+	    		for(String key : map.keySet()){
+	    			builder.field(key, map.get(key));
+	    		
+	    		}
+	    	}
+	    	builder.endObject();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+    	
+    	return builder;
+    }
+	
+	public void clearScroll(String scrollId, RestHighLevelClient client) {
+		ClearScrollRequest clearScrollRequest = new ClearScrollRequest(); 
+		clearScrollRequest.addScrollId(scrollId);
+		try {
+			client.clearScroll(clearScrollRequest, RequestOptions.DEFAULT);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}	
+	
+	/**
+	 * snapshot repository 생성
+	 * @param repositoryName
+	 * @param location
+	 * @throws IOException 
+	 */
+	public void putRepo(String repositoryName, String location) throws IOException{
+		PutRepositoryRequest request = new PutRepositoryRequest();
+		
+		Map<String, Object> map = new HashMap<String, Object>();
+		map.put(FsRepository.LOCATION_SETTING.getKey(), location);
+		map.put(FsRepository.COMPRESS_SETTING.getKey(), true);
+		
+		request.settings(map);
+		request.name(repositoryName);
+		request.type(FsRepository.TYPE);
+		
+//		RestHighLevelClient client = getClient();
+//		try {
+//			AcknowledgedResponse response = client.snapshot().createRepository(request, RequestOptions.DEFAULT);
+//			boolean acknowledged = response.isAcknowledged(); 
+//			System.out.println("client put repo end!! "+acknowledged);
+//		} catch (Exception e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		} finally {
+//			client.close();
+//		}		
+		
+//		RestHighLevelClient bclient = getBackUpClient();
+		RestHighLevelClient client = getClient();
+		try {
+			AcknowledgedResponse response = client.snapshot().createRepository(request, RequestOptions.DEFAULT);
+			boolean acknowledged = response.isAcknowledged(); 
+//			System.out.println("bclient put repo end!! "+acknowledged);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} finally {
+			client.close();
+		}
+		
+		//getRepo(repositoryName);
+	}
+	
+	/**
+	 * snapshot repository 목록 확인
+	 * @param repositoryName
+	 * @throws IOException 
+	 */
+	/*
+	 * public void getRepo(String repositoryName) throws IOException{
+	 * GetRepositoriesRequest request = new GetRepositoriesRequest(); String []
+	 * repositories = new String[] {repositoryName};
+	 * request.repositories(repositories);
+	 * 
+	 * RestHighLevelClient client = getClient(); try { GetRepositoriesResponse
+	 * response = client.snapshot().getRepository(request, RequestOptions.DEFAULT);
+	 * List<RepositoryMetadata> repositoryMetadataResponse =
+	 * response.repositories(); for(RepositoryMetadata repo :
+	 * repositoryMetadataResponse){ // System.out.println("client : " +
+	 * repo.name()); } } catch (Exception e) { // TODO Auto-generated catch block
+	 * e.printStackTrace(); } finally { client.close(); }
+	 */
+		
+//		RestHighLevelClient bclient = getBackUpClient();
+//		try {
+//			GetRepositoriesResponse response = bclient.snapshot().getRepository(request, RequestOptions.DEFAULT);
+//			List<RepositoryMetadata> repositoryMetadataResponse = response.repositories();
+//			for(RepositoryMetadata repo : repositoryMetadataResponse){
+//				System.out.println("bclient" + repo.name());
+//			}
+//		} catch (Exception e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		} finally {
+//			bclient.close();
+//		}
+		
+//	}
+	
+	/**
+	 * snapshot repository 삭제
+	 * @param repositoryName
+	 */
+	public void delRepo(String repositoryName){
+		DeleteRepositoryRequest request = new DeleteRepositoryRequest(repositoryName);
+		RestHighLevelClient client = getClient();
+		try {
+			AcknowledgedResponse response = client.snapshot().deleteRepository(request, RequestOptions.DEFAULT);
+			boolean acknowledged = response.isAcknowledged();
+//			System.out.println("del repo end!! "+acknowledged);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	}
+	
+	/**
+	 * snapshot 생성
+	 * @param repositoryName
+	 * @param snapshotName
+	 * @param indice
+	 */
+	public void createSnapshot(String repositoryName, String snapshotName, String indice){
+		CreateSnapshotRequest request = new CreateSnapshotRequest();
+		request.repository(repositoryName);	
+		request.snapshot(snapshotName);
+		request.indices(indice);
+		request.includeGlobalState(false);
+		request.indicesOptions(IndicesOptions.fromOptions(true, false, true, true));
+		request.waitForCompletion(true);
+		
+		final RestHighLevelClient client = getClient();
+		
+		ActionListener<CreateSnapshotResponse> listener =
+			    new ActionListener<CreateSnapshotResponse>() {
+			        public void onResponse(CreateSnapshotResponse createSnapshotResponse) {
+			        	try {
+							client.close();
+							System.out.println("createSnapshot "+createSnapshotResponse.status());
+						} catch (Exception e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+			        }
+
+			        public void onFailure(Exception exception) {
+			        	try {
+							client.close();
+							System.out.println(exception.getMessage());
+						} catch (Exception e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+			        }
+			    };
+		client.snapshot().createAsync(request, RequestOptions.DEFAULT, listener);
+	}
+	
+	/**
+	 * repository에 생성 된 snapshot 목록 확인
+	 * @param repositoryName
+	 */
+	public void getSnapshot(String repositoryName){
+		GetSnapshotsRequest request = new GetSnapshotsRequest();
+		request.repository(repositoryName);
+		
+		RestHighLevelClient client = getClient();
+		try {
+			GetSnapshotsResponse response = client.snapshot().get(request, RequestOptions.DEFAULT);
+			List<SnapshotInfo> snapshotsInfos = response.getSnapshots();
+			List<String> test = snapshotsInfos.get(0).indices();
+			System.out.println(snapshotsInfos.size());
+			for(String str:test){
+				System.out.println(str);
+			}
+			
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} finally {
+			try {
+				client.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		
+//		RestHighLevelClient bclient = getBackUpClient();
+//		try {
+//			GetSnapshotsResponse response = bclient.snapshot().get(request, RequestOptions.DEFAULT);
+//			List<SnapshotInfo> snapshotsInfos = response.getSnapshots();
+//			List<String> test = snapshotsInfos.get(0).indices();
+//			System.out.println(snapshotsInfos.size());
+//			for(String str:test){
+//				System.out.println(str);
+//			}
+//			bclient.close();
+//		} catch (IOException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+	}
+	
+	/**
+	 * snapshot 삭제
+	 * @param repositoryName
+	 * @param snapshots
+	 */
+//	public void deleteSnapshot(String repositoryName, String[] snapshots){
+//		DeleteSnapshotRequest request = new DeleteSnapshotRequest(repositoryName);
+//		request.snapshots(snapshots);
+//		
+//		RestHighLevelClient client = getClient();
+//		try {
+//			AcknowledgedResponse response = client.snapshot().delete(request, RequestOptions.DEFAULT);
+//			boolean acknowledged = response.isAcknowledged();
+//			System.out.println(acknowledged);
+//		} catch (IOException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+//	}
+	
+	/**
+	 * snapshot 복원
+	 * @param repositoryName
+	 * @param snapshotName
+	 */
+	public void restoreSnapshot(String repositoryName, String snapshotName){
+		RestoreSnapshotRequest request = new RestoreSnapshotRequest(repositoryName, snapshotName);
+		request.includeGlobalState(false);
+		request.waitForCompletion(true);
+		request.partial(true);
+		request.indicesOptions(new IndicesOptions( 
+			    EnumSet.of(IndicesOptions.Option.IGNORE_UNAVAILABLE),
+			    EnumSet.of(IndicesOptions.WildcardStates.OPEN)));
+		final RestHighLevelClient client = getClient();
+		
+		ActionListener<RestoreSnapshotResponse> listener =
+			    new ActionListener<RestoreSnapshotResponse>() {
+			        public void onResponse(RestoreSnapshotResponse restoreSnapshotResponse) {
+			        	try {
+							client.close();
+							System.out.println("restoreSnapshot "+restoreSnapshotResponse.status());
+						} catch (Exception e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+			        }
+
+			        public void onFailure(Exception e) {
+			        	try {
+							client.close();
+							System.out.println(e.getMessage());
+						} catch (Exception ef) {
+							// TODO Auto-generated catch block
+							ef.printStackTrace();
+						}
+			        }
+			    };
+			    
+		client.snapshot().restoreAsync(request, RequestOptions.DEFAULT, listener); 
+	}
+	
+	public boolean createIndex(String indexName, XContentBuilder indexBuilder) throws Exception{
+		CreateIndexRequest request = new CreateIndexRequest(indexName);
+		SimpleDateFormat df = new SimpleDateFormat("yyyy.MM.dd");
+    	String IndexName = "message_"+df;
+		request.settings(Settings.builder()
+				.put("index.number_of_shards",3)
+				.put("index.number_of_replicas",1));
+		
+		//request.mapping("_doc", indexBuilder);
+		
+		final RestHighLevelClient client = getClient();
+		boolean isAck = false;
+		try {
+			isAck = client.indices().create(request, RequestOptions.DEFAULT).isAcknowledged();
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} finally {
+			try {
+				client.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		return isAck;
+	}
+	
+	public void printTime(String tag){
+		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+    	Date time = new Date();
+    	
+    	System.out.println(tag + " : " + format.format(time));
+	}
+	
+	public void allSearchTest(String sortField, AggregationBuilder aggBuilder) throws Exception{
+    	SearchRequest searchRequest = new SearchRequest("wave_test*"); 
+
+		SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder(); 
+		searchSourceBuilder.query(QueryBuilders.matchAllQuery()); 
+		searchSourceBuilder.from(0);
+		searchSourceBuilder.size(10000);	
+		searchSourceBuilder.sort(new FieldSortBuilder(sortField).order(SortOrder.DESC));
+
+		//AggregationBuilders.terms(aggName).field(keyword);
+		if(aggBuilder != null)
+			searchSourceBuilder.aggregation(aggBuilder);
+		
+		searchRequest.source(searchSourceBuilder); 
+		
+		RestHighLevelClient client = getClient();
+		try{
+			SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+			
+			System.out.println("응답시간 : "+searchResponse.getTook().getMillis());
+		}catch(Exception e){
+			System.out.println("allSearchTest");
+			e.printStackTrace();
+		}finally {
+			client.close();
+		}
+    }
+	
+
+	
+	
+}

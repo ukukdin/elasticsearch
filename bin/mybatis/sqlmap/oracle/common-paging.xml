@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+	
+<mapper namespace="paging">
+
+ 
+	<sql id="headerPagingStart">
+		<![CDATA[
+			SELECT * FROM (
+				SELECT ROWNUM RNUM, B.* FROM (
+					SELECT (
+						CASE WHEN ( #{recordSize} * ( #{currentPage} - 1) + 1) > TOTAL_CNT
+						     THEN 1
+							 ELSE ( #{recordSize} * ( #{currentPage} - 1) + 1)
+						 END
+					 ) START_NUM
+					 , (
+						CASE WHEN ( #{currentPage} * #{recordSize} )> TOTAL_CNT
+						     THEN TOTAL_CNT
+							 ELSE ( #{currentPage} * #{recordSize} )
+					     END
+				     ) END_NUM
+					 , A.*
+					 FROM (
+					 	SELECT COUNT(*) OVER() TOTAL_CNT, A.* FROM (
+		]]>
+	</sql>
+	
+	<sql id="footerPagingEnd">
+		<![CDATA[
+				) A
+			) A
+		) B
+		  WHERE ROWNUM <= END_NUM
+		)
+		 WHERE RNUM >= START_NUM
+		]]>
+	</sql>
+	
+</mapper>

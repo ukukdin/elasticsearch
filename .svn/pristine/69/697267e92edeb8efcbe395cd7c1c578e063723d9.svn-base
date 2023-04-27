@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding= "UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+ 
+<mapper namespace="nurier.scraping.rulemanagement.dao.RuleManagementSqlMapper">
+    
+    <select id="isRuleData" parameterType="String" resultType="java.util.HashMap">
+        SELECT
+              TO_CHAR(SEQ_NUM)  AS SEQ_NUM
+            , RULE_ID           AS RULE_ID
+            , RULE_NAME         AS RULE_NAME
+            , RULE_TYPE         AS RULE_TYPE
+            , SCORE             AS SCORE
+            , RESULT_CODE       AS RESULT_CODE
+            , SCRIPT            AS SCRIPT
+            , IS_USED           AS IS_USED
+            , MODDATE           AS MODDATE
+            , MODNAME           AS MODNAME
+        FROM
+            NPAS_RULE_SET
+        WHERE
+            RULE_ID = #{RULE_ID}
+    </select>
+    
+    <update id="insertRuleData" parameterType="java.util.HashMap">
+        <selectKey resultType="String" keyProperty="seq_num" order="BEFORE">
+            SELECT NVL(MAX(SEQ_NUM),0)+1 as seq_num FROM NPAS_RULE_SET
+        </selectKey>
+        
+        INSERT INTO NPAS_RULE_SET (
+              SEQ_NUM
+            , RULE_ID
+            , RULE_NAME
+            , RULE_TYPE
+            , SCORE
+            , RESULT_CODE
+            , SCRIPT
+            , IS_USED
+            , MODNAME
+            , MODDATE
+        ) VALUES (
+              #{seq_num}
+            , #{RULE_ID}
+            , #{RULE_NAME}
+            , #{RULE_TYPE}
+            , #{SCORE}
+            , #{RESULT_CODE}
+            , #{SCRIPT}
+            , #{IS_USED}
+            , #{MODNAME}
+            , TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS')
+        )
+    </update>
+    
+    <insert id="updateRuleData" parameterType="java.util.HashMap">
+        UPDATE NPAS_RULE_SET SET
+              RULE_ID       = #{RULE_ID}
+            , RULE_NAME     = #{RULE_NAME}
+            , RULE_TYPE     = #{RULE_TYPE}
+            , SCORE         = #{SCORE}
+            , RESULT_CODE   = #{RESULT_CODE}
+            , SCRIPT        = #{SCRIPT}
+            , IS_USED       = #{IS_USED}
+            , MODNAME       = #{MODNAME}
+            , MODDATE       = TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS')
+        WHERE SEQ_NUM = #{SEQ_NUM}
+    </insert>
+    
+</mapper>

@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:sec="http://www.springframework.org/schema/security"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                           http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://www.springframework.org/schema/security
+                           http://www.springframework.org/schema/security/spring-security.xsd">
+
+
+    <!-- <sec:http auto-config="true" use-expressions="true"  authentication-manager-ref="in-database-auth"  access-denied-page="/servlet/common/error_403.fds"> -->
+    <sec:http auto-config="true" use-expressions="true"  authentication-manager-ref="in-database-auth" >
+        <sec:intercept-url pattern="/content/**"                                                          access="permitAll" />
+        <sec:intercept-url pattern="/push/**"                                                             access="permitAll" />
+        <sec:intercept-url pattern="/monitoring/Dashboard/dashboard"                                      access="permitAll" />
+        <sec:intercept-url pattern="/monitoringRecv/**"                                                   access="permitAll" />
+        <sec:intercept-url pattern="/servlet/bank/**"                                                     access="permitAll" />
+        <sec:intercept-url pattern="/servlet/login/go_to_login.fds"                                       access="permitAll" />
+        <sec:intercept-url pattern="/servlet/nfds/setting/user_management/user_first_chk.fds"             access="permitAll" /> <!-- 첫 로그인시 비밀번호 변경처리용 -->
+        <sec:intercept-url pattern="/servlet/nfds/setting/user_management/user_first_edit.fds"            access="permitAll" /> <!-- 첫 로그인시 비밀번호 변경처리용 -->
+        <sec:intercept-url pattern="/servlet/nfds/setting/user_management/user_first_update.fds"          access="permitAll" /> <!-- 첫 로그인시 비밀번호 변경처리용 -->
+        <sec:intercept-url pattern="/servlet/nfds/callcenter/fds_detection_result_inquiry_log.fds"        access="permitAll" /> <!-- 고객행복센터로그관리 -->
+        <sec:intercept-url pattern="/servlet/nfds/callcenter/excel_fds_detection_result_inquiry_log.xls"  access="permitAll" />                                        <!-- 고객행복센터로그관리 엑셀파일 (엑셀은 admin group 만 가능) -->
+        <sec:intercept-url pattern="/servlet/checklist/**"                                                access="permitAll" /> <!-- 체크리스트 접근권한 -->
+        <sec:intercept-url pattern="/servlet/setting/**"                                                  access="permitAll" /> <!-- 설정부분 -->
+        <sec:intercept-url pattern="/servlet/nfds/setting/**"                                             access="permitAll" /> <!-- 설정부분 -->
+        <sec:intercept-url pattern="/servlet/nfds/engine/**"                                              access="permitAll" />
+        <sec:intercept-url pattern="/servlet/nfds/main.fds"                                               access="permitAll" />
+        <!-- <sec:intercept-url pattern="/servlet/nfds/**"                                                     access="isAuthenticated()" /> --> <!-- 순서중요 : 포괄적범위는 마지막에 선언할 것 -->
+        
+        <sec:intercept-url pattern="/**/**"                                                               access="permitAll" />
+
+        <sec:form-login login-page                         ="/servlet/login/go_to_login.fds"
+                        login-processing-url               ="/servlet/login/j_spring_security_check"
+                        authentication-failure-url         ="/servlet/login/go_to_login.fds?login_failed=true"
+                        default-target-url                 ="/servlet/nfds/main.fds"
+                        authentication-success-handler-ref ="loginSuccessHandler"
+                        authentication-failure-handler-ref ="loginFailureHandler"
+                        username-parameter="j_username"
+                        password-parameter="j_password"
+                        />
+
+        <sec:logout     logout-url                 ="/servlet/login/j_spring_security_logout"
+                        logout-success-url         ="/servlet/login/go_to_login.fds?logout=true"
+                        invalidate-session         ="false" />
+
+        <sec:csrf disabled="true"/>
+        
+        <sec:session-management>
+             <sec:concurrency-control max-sessions="50" error-if-maximum-exceeded="true" expired-url="/index.html" /><!-- max-sessions 접속할 수 있는 최대 로그인수 -->
+        </sec:session-management>
+    </sec:http>
+    
+    
+    <bean id="passwordEncoder" class="nurier.scraping.common.support.NfdsPasswordEncoder" />
+    <sec:authentication-manager  id="in-database-auth">
+        <sec:authentication-provider>
+            <sec:jdbc-user-service  data-source-ref="dataSource"
+                                    users-by-username-query="select USER_ID as username, USER_PASS as password, to_number(ID_USE_YN) as enabled from NFDS_USER where USER_ID = ?"
+                                    authorities-by-username-query="select u.USER_ID as username, g.GROUP_NAME as authority from NFDS_USER u inner join NFDS_USER_GROUP g on u.GROUP_CODE = g.GROUP_CODE where USER_ID = ?" />
+                                    
+            <sec:password-encoder ref="passwordEncoder" />
+        </sec:authentication-provider>
+    </sec:authentication-manager>
+    
+    
+    <!-- // 인메모리방식
+    <sec:authentication-manager id="in-memory-auth">
+        <sec:authentication-provider>
+            <sec:user-service>
+                <sec:user name="admin" password="admin" authorities="ROLE_ADMIN" />
+                <sec:user name="demo"  password="demo"  authorities="ROLE_USER"  />
+            </sec:user-service>
+        </sec:authentication-provider>
+    </sec:authentication-manager>
+    -->
+
+    <bean id="loginSuccessHandler" class="nurier.scraping.common.handler.LoginSuccessHandler" />
+    <bean id="loginFailureHandler" class="nurier.scraping.common.handler.LoginFailureHandler" />
+     
+</beans>
+

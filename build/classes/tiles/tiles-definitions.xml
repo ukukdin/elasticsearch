@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE tiles-definitions PUBLIC "-//Apache Software Foundation//DTD Tiles Configuration 3.0//EN" "http://tiles.apache.org/dtds/tiles-config_3_0.dtd">
+
+<tiles-definitions>
+
+    <!-- 업무용 template 정의::BEGIN -->
+    <definition name="login"              template="/WEB-INF/jsp/service/tiles/main/login.layout.jsp">
+        <put-attribute name="body"                value="" />
+    </definition>
+    
+    <definition name="popup"              template="/WEB-INF/jsp/service/tiles/main/popup.layout.jsp">
+        <put-attribute name="contents"            value="" />
+    </definition>
+    
+    <definition name="main-layout"              template="/WEB-INF/jsp/service/tiles/main/main.layout.jsp">
+        <put-attribute name="sidebar_header"      value="/WEB-INF/jsp/service/tiles/main/attribute/sidebar_header.attr.jsp" />
+        <put-attribute name="left_menu"           value="/servlet/nfds/common/menu.fds" />
+        <put-attribute name="header"              value="/WEB-INF/jsp/service/tiles/main/attribute/header.attr.jsp" />
+        <put-attribute name="breadcrumb"          value="/WEB-INF/jsp/service/tiles/main/attribute/breadcrumb.attr.jsp" />
+        <put-attribute name="contents"            value="/WEB-INF/jsp/service/tiles/main/attribute/contents.attr.jsp" />
+        <put-attribute name="footer"              value="/WEB-INF/jsp/service/tiles/main/attribute/footer.attr.jsp" />
+        <put-attribute name="chat"                value="/WEB-INF/jsp/service/tiles/main/attribute/chat.attr.jsp" />
+        <put-attribute name="modals"              value="/WEB-INF/jsp/service/tiles/main/attribute/modals.attr.jsp" />
+    </definition>
+    
+    <definition name="chart"                   template="/WEB-INF/jsp/service/tiles/chart/main.layout.jsp">
+        <put-attribute name="sidebar_header"      value="/WEB-INF/jsp/service/tiles/main/attribute/sidebar_header.attr.jsp" />
+        <put-attribute name="left_menu"           value="/servlet/nfds/common/menu.fds" />
+        <put-attribute name="header"              value="/WEB-INF/jsp/service/tiles/main/attribute/header.attr.jsp" />
+        <put-attribute name="breadcrumb"          value="/WEB-INF/jsp/service/tiles/main/attribute/breadcrumb.attr.jsp" />
+        <put-attribute name="contents"            value="/WEB-INF/jsp/service/tiles/main/attribute/contents.attr.jsp" />
+        <put-attribute name="footer"              value="/WEB-INF/jsp/service/tiles/main/attribute/footer.attr.jsp" />
+        <put-attribute name="chat"                value="/WEB-INF/jsp/service/tiles/main/attribute/chat.attr.jsp" />
+        <put-attribute name="modals"              value="/WEB-INF/jsp/service/tiles/main/attribute/modals.attr.jsp" />
+    </definition>
+    
+    
+    <!-- 업무용 template 정의::END   -->
+
+
+
+    <!-- Login 입구 -->
+    <definition name="scraping/login/sign_in.tiles"                   extends="login">
+        <put-attribute name="body"                                    value="/WEB-INF/jsp/service/main/scraping/login/sign_in.jsp" />
+    </definition>
+
+    <!-- 고객행복센터 popup 용 -->
+    <definition name="nfds/callcenter/fds_detection_result.tiles"   extends="popup">
+        <put-attribute name="contents"                                value="/WEB-INF/jsp/service/nfds/callcenter/fds_detection_result.jsp" />
+    </definition>
+
+
+    <!-- 모니터링 > Dashboard -->
+    <definition name="scraping/monitoring/dashboard/dashboard.tiles" extends="chart">
+        <put-attribute name="contents" value="/WEB-INF/jsp/service/main/scraping/monitoring/dashboard/dashboard.jsp" />
+        
+    </definition>
+
+
+
+    <definition name="*.tiles" extends="main-layout">
+        <put-attribute name="contents" value="/WEB-INF/jsp/service/main/{1}.jsp" />
+    </definition>
+    <definition name="*/*.tiles" extends="main-layout">
+        <put-attribute name="contents" value="/WEB-INF/jsp/service/main/{1}/{2}.jsp" />
+    </definition>
+    <definition name="*/*/*.tiles" extends="main-layout">
+        <put-attribute name="contents" value="/WEB-INF/jsp/service/main/{1}/{2}/{3}.jsp" />
+    </definition>
+    <definition name="*/*/*/*.tiles" extends="main-layout">
+        <put-attribute name="contents" value="/WEB-INF/jsp/service/main/{1}/{2}/{3}/{4}.jsp" />
+    </definition>
+<definition name="*/*/*/*/*.tiles" extends="main-layout">
+        <put-attribute name="contents" value="/WEB-INF/jsp/service/main/{1}/{2}/{3}/{4}/{5}.jsp" />
+    </definition>
+
+
+    <!-- main -->
+    <!-- 
+    <definition name="main-layout" template="/WEB-INF/jsp/service/tiles/layout/main.jsp">
+        <put-attribute name="header" value="/WEB-INF/jsp/service/tiles/layout/header.jsp" />
+        <put-attribute name="body" value="" />
+        <put-attribute name="footer" value="/WEB-INF/jsp/service/tiles/layout/footer.jsp" />
+    </definition>
+    
+    <definition name="*.tiles" extends="main-layout">
+        <put-attribute name="body" value="/WEB-INF/jsp/service/main/{1}.jsp" />
+    </definition>
+    <definition name="*/*.tiles" extends="main-layout">
+        <put-attribute name="body" value="/WEB-INF/jsp/service/main/{1}/{2}.jsp" />
+    </definition>
+    <definition name="*/*/*.tiles" extends="main-layout">
+        <put-attribute name="body" value="/WEB-INF/jsp/service/main/{1}/{2}/{3}.jsp" />
+    </definition>
+    -->
+
+</tiles-definitions>

@@ -1,0 +1,713 @@
+package nurier.scraping.dashboard.controller;
+
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.HashMap;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.ibatis.session.SqlSession;
+import org.elasticsearch.action.search.SearchRequest;
+import org.elasticsearch.action.search.SearchRequestBuilder;
+import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.action.search.SearchType;
+import org.elasticsearch.action.support.IndicesOptions;
+import org.elasticsearch.client.Client;
+import org.elasticsearch.client.RequestOptions;
+import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.search.aggregations.AggregationBuilder;
+import org.elasticsearch.search.aggregations.AggregationBuilders;
+import org.elasticsearch.search.aggregations.bucket.MultiBucketsAggregation.Bucket;
+import org.elasticsearch.search.aggregations.bucket.terms.IncludeExclude;
+import org.elasticsearch.search.aggregations.bucket.terms.Terms;
+import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
+import org.elasticsearch.search.builder.SearchSourceBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.servlet.ModelAndView;
+
+import nurier.scraping.common.constant.CommonConstants;
+import nurier.scraping.common.constant.FdsMessageFieldNames;
+import nurier.scraping.elasticsearch.ElasticsearchService;
+
+@Controller
+public class RealTimeChartController {
+
+    @Autowired
+    private ElasticsearchService elasticSearchService;
+    
+    @Autowired
+    private SqlSession sqlSession;
+
+    private static final Logger Logger = LoggerFactory.getLogger(RealTimeChartController.class);
+    
+    /* chart demo */
+    @RequestMapping("/servlet/nfds/dashboard/realtimechart.fds")
+    public String getRealChart() throws Exception {
+        Logger.debug("[RealTimeChartController][getRealChart][Start]");
+        return "nfds/dashboard/realtimecharts.tiles";
+    }
+    
+    @RequestMapping("/servlet/nfds/dashboard/chart_mediatype.fds")
+    protected @ResponseBody HashMap<String, Object> chartQuery() throws Exception {
+        
+        RestHighLevelClient client        = elasticSearchService.getClientOfSearchEngine();
+        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+        String rDate = df.format(System.currentTimeMillis());
+        String indices [] = elasticSearchService.getIndicesForFdsDailyIndex("nacf",rDate, rDate);
+        SearchRequest searchRequest = null;
+        searchRequest.searchType(SearchType.QUERY_THEN_FETCH).indices(indices);
+        SearchSourceBuilder sourcebuilder = new SearchSourceBuilder();
+        sourcebuilder.size(0);
+        String [] blockingType = {"B","C","M","P"}; // blockingType 분류
+        HashMap<String, Object> chartMap = new HashMap<String, Object>();
+        ArrayList<Object> value_M = new ArrayList<Object>();
+        ArrayList<Object> value_P = new ArrayList<Object>();
+        ArrayList<Object> value_C = new ArrayList<Object>();
+        ArrayList<Object> value_B = new ArrayList<Object>();
+        ArrayList<Object> fieldName = new ArrayList<Object>();
+        
+        String [] ibip = {"091","105","106"};   // 개인뱅킹
+        String [] ibic = {"070","115","116"};   // 기업뱅킹
+        String [] sbip = {"024","021","022","023","100","101"}; // 개인스마트
+        String [] sbic = {"026","027","110","111"};             // 기업스마트
+        String [] sbal = {"156","157"};             // 올원뱅크
+        String [] sbco = {"151","152"};             // NH콕뱅크
+        String [] tele = {"991"};             // 텔레뱅킹
+        String startDtm =  new StringBuffer().append(rDate).append(" 00:00:00.000").toString();
+        String endDtm =  new StringBuffer().append(rDate).append(" 23:59:59.000").toString();
+ 
+        
+//        BoolFilterBuilder boolFilterBuilder = new BoolFilterBuilder();
+//        boolFilterBuilder.must( FilterBuilders.termsFilter("blockingType"          , blockingType));
+        sourcebuilder.query(QueryBuilders.boolQuery().must(QueryBuilders.rangeQuery("TR_DTM").from(startDtm).to(endDtm)).filter(null));
+//        searchRequest.setExtraSource("");
+        
+        sourcebuilder.aggregation(AggregationBuilders.filter("개인뱅킹", QueryBuilders.termsQuery("EBNK_MED_DSC", ibip)).subAggregation(AggregationBuilders.terms("blockingType").field("blockingType").size(10)));
+        sourcebuilder.aggregation(AggregationBuilders.filter("기인뱅킹", QueryBuilders.termsQuery("EBNK_MED_DSC", ibic)).subAggregation(AggregationBuilders.terms("blockingType").field("blockingType").size(10)));
+        sourcebuilder.aggregation(AggregationBuilders.filter("개인스마트", QueryBuilders.termsQuery("EBNK_MED_DSC", sbip)).subAggregation(AggregationBuilders.terms("blockingType").field("blockingType").size(10)));
+        sourcebuilder.aggregation(AggregationBuilders.filter("기업스마트", QueryBuilders.termsQuery("EBNK_MED_DSC", sbic)).subAggregation(AggregationBuilders.terms("blockingType").field("blockingType").size(10)));
+        sourcebuilder.aggregation(AggregationBuilders.filter("올원뱅크", QueryBuilders.termsQuery("EBNK_MED_DSC", sbal)).subAggregation(AggregationBuilders.terms("blockingType").field("blockingType").size(10)));
+        sourcebuilder.aggregation(AggregationBuilders.filter("NH콕뱅크", QueryBuilders.termsQuery("EBNK_MED_DSC", sbco)).subAggregation(AggregationBuilders.terms("blockingType").field("blockingType").size(10)));
+        sourcebuilder.aggregation(AggregationBuilders.filter("텔레뱅킹", QueryBuilders.termsQuery("EBNK_MED_DSC", tele)).subAggregation(AggregationBuilders.terms("blockingType").field("blockingType").size(10)));
+        searchRequest.source(sourcebuilder);
+        
+        SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+       
+        Terms ibip_tf = (Terms)searchResponse.getAggregations().get("개인뱅킹");
+        Terms ibic_tf = (Terms)searchResponse.getAggregations().get("기업뱅킹");
+        Terms sbip_tf = (Terms)searchResponse.getAggregations().get("개인스마트");
+        Terms sbic_tf = (Terms)searchResponse.getAggregations().get("기업스마트");
+        Terms sbal_tf = (Terms)searchResponse.getAggregations().get("올원뱅크");
+        Terms sbco_tf = (Terms)searchResponse.getAggregations().get("NH콕뱅크");
+        Terms tele_tf = (Terms)searchResponse.getAggregations().get("텔레뱅킹");
+        
+        
+        fieldName.add("인터넷뱅킹 - 개인");
+        fieldName.add("인터넷뱅킹 - 기업");
+        fieldName.add("스마트뱅킹 - 개인");
+        fieldName.add("스마트뱅킹 - 기업");
+        fieldName.add("올원뱅크");
+        fieldName.add("NH콕뱅크");
+        fieldName.add("텔레뱅킹");
+        
+        int ibip_B = 0;
+        int ibip_C = 0;
+        int ibip_M = 0;
+        int ibip_P = 0;
+        
+        for(Terms.Bucket entry : ibip_tf.getBuckets()) {
+            String term = entry.getKey().toString();
+             
+            int count = (int) entry.getDocCount();
+            
+            if(StringUtils.equals(term, "B")) ibip_B = count;
+            if(StringUtils.equals(term, "C")) ibip_C = count;
+            if(StringUtils.equals(term, "M")) ibip_M = count;
+            if(StringUtils.equals(term, "P")) ibip_P = count;
+        }
+
+        value_B.add(ibip_B);
+        value_C.add(ibip_C);
+        value_M.add(ibip_M);
+        value_P.add(ibip_P);
+        int ibic_B = 0;
+        int ibic_C = 0;
+        int ibic_M = 0;
+        int ibic_P = 0;
+        
+        for(Terms.Bucket entry : ibic_tf.getBuckets()) {
+            String term = entry.getAggregations().toString();
+            int count = (int) entry.getDocCount();
+            if(StringUtils.equals(term, "B")) ibic_B = count;
+            if(StringUtils.equals(term, "C")) ibic_C = count;
+            if(StringUtils.equals(term, "M")) ibic_M = count;
+            if(StringUtils.equals(term, "P")) ibic_P = count;
+        }
+        value_B.add(ibic_B);
+        value_C.add(ibic_C);
+        value_M.add(ibic_M);
+        value_P.add(ibic_P);
+        
+        int sbip_B = 0;
+        int sbip_C = 0;
+        int sbip_M = 0;
+        int sbip_P = 0;
+        
+        for(Terms.Bucket entry : sbip_tf.getBuckets()) {
+            String term = entry.getAggregations().toString();
+            int count = (int)entry.getDocCount();
+           
+            if(StringUtils.equals(term, "B")) sbip_B = count;
+            if(StringUtils.equals(term, "C")) sbip_C = count;
+            if(StringUtils.equals(term, "M")) sbip_M = count;
+            if(StringUtils.equals(term, "P")) sbip_P = count;
+        }
+        
+        value_B.add(sbip_B);
+        value_C.add(sbip_C);
+        value_M.add(sbip_M);
+        value_P.add(sbip_P);
+        
+        int sbic_B = 0;
+        int sbic_C = 0;
+        int sbic_M = 0;
+        int sbic_P = 0;
+        
+        for(Terms.Bucket entry : sbic_tf.getBuckets()) {
+            String term = entry.getAggregations().toString();
+            int count = (int)entry.getDocCount();
+        
+            if(StringUtils.equals(term, "B")) sbic_B = count;
+            if(StringUtils.equals(term, "C")) sbic_C = count;
+            if(StringUtils.equals(term, "M")) sbic_M = count;
+            if(StringUtils.equals(term, "P")) sbic_P = count;
+        }
+        
+        value_B.add(sbic_B);
+        value_C.add(sbic_C);
+        value_M.add(sbic_M);
+        value_P.add(sbic_P);
+        
+        int sbal_B = 0;
+        int sbal_C = 0;
+        int sbal_M = 0;
+        int sbal_P = 0;
+        
+        for(Terms.Bucket entry : sbal_tf.getBuckets()) {
+            String term = entry.getAggregations().toString();
+            int count = (int)entry.getDocCount();
+      
+            
+            if(StringUtils.equals(term, "B")) sbal_B = count;
+            if(StringUtils.equals(term, "C")) sbal_C = count;
+            if(StringUtils.equals(term, "M")) sbal_M = count;
+            if(StringUtils.equals(term, "P")) sbal_P = count;
+        }
+
+        value_B.add(sbal_B);
+        value_C.add(sbal_C);
+        value_M.add(sbal_M);
+        value_P.add(sbal_P);
+        
+        int sbco_B = 0;
+        int sbco_C = 0;
+        int sbco_M = 0;
+        int sbco_P = 0;
+        
+        for(Terms.Bucket entry : sbco_tf.getBuckets()) {
+            String term = entry.getAggregations().toString();
+            int count = (int)entry.getDocCount();
+       
+            
+            if(StringUtils.equals(term, "B")) sbco_B = count;
+            if(StringUtils.equals(term, "C")) sbco_C = count;
+            if(StringUtils.equals(term, "M")) sbco_M = count;
+            if(StringUtils.equals(term, "P")) sbco_P = count;
+        }
+
+        value_B.add(sbco_B);
+        value_C.add(sbco_C);
+        value_M.add(sbco_M);
+        value_P.add(sbco_P);
+        
+        int tele_B = 0;
+        int tele_C = 0;
+        int tele_M = 0;
+        int tele_P = 0;
+        
+        
+        for(Terms.Bucket entry : tele_tf.getBuckets()) {
+            String term = entry.getAggregations().toString();
+            int count = (int)entry.getDocCount();
+       
+           
+            if(StringUtils.equals(term, "B")) tele_B = count;
+            if(StringUtils.equals(term, "C")) tele_C = count;
+            if(StringUtils.equals(term, "M")) tele_M = count;
+            if(StringUtils.equals(term, "P")) tele_P = count;
+        }
+        
+        value_B.add(tele_B);
+        value_C.add(tele_C);
+        value_M.add(tele_M);
+        value_P.add(tele_P);
+        
+        chartMap.put("fieldName", fieldName);
+        chartMap.put("value_C", value_C);
+        chartMap.put("value_B", value_B);
+        chartMap.put("value_M", value_M);
+        chartMap.put("value_P", value_P);
+        client.close();
+        return chartMap;
+    }
+    
+    
+    /*
+     * 처리자 현황
+     */
+    @RequestMapping("/servlet/nfds/dashboard/chart_callcenter.fds")
+    protected @ResponseBody HashMap<String, Object> esCallcenterChart() throws Exception {
+        
+        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+        String rDate = df.format(System.currentTimeMillis());
+        
+        BoolQueryBuilder boolFilterBuilder = new BoolQueryBuilder();
+        RestHighLevelClient client = elasticSearchService.getClientOfSearchEngine();
+//        String startDateTime =  new StringBuffer().append(Date).append(" 00:00:00").toString();
+//        String endDateTime =  new StringBuffer().append(Date).append(" 23:59:59").toString();
+        String startDateTime =  "now+9h/d";
+        String endDateTime =  "now+9h/d";
+//        boolFilterBuilder.must( FilterBuilders.termFilter("ruleType"          , "이체"));
+        String indices [] = elasticSearchService.getIndicesForFdsDailyIndex("nacf",rDate, rDate);
+        
+        HashMap<String, Object> chartMap = new HashMap<String, Object>();
+        ArrayList<Object> fieldName = new ArrayList<Object>();
+        ArrayList<Object> count = new ArrayList<Object>();
+        
+        SearchRequest searchRequest = new   SearchRequest();
+        SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
+        sourceBuilder.size(0);
+        searchRequest.searchType(SearchType.QUERY_THEN_FETCH).indices(indices).indicesOptions(IndicesOptions.fromOptions(true, true, true, true));
+        
+        sourceBuilder.query(QueryBuilders.boolQuery().must(QueryBuilders.rangeQuery(FdsMessageFieldNames.LOG_DATE_TIME).from(startDateTime).to(endDateTime)).filter(null));
+//      searchRequest_aggs.setPostFilter(FilterBuilders.rangeFilter(FdsMessageFieldNames.LOG_DATE_TIME).from(startDateTime).to(endDateTime));
+      
+        sourceBuilder.aggregation(AggregationBuilders.terms("콜센터").field("processState").size(10));
+        searchRequest.source(sourceBuilder);
+        SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+        
+        Terms callcenter = (Terms)searchResponse.getAggregations().get("콜센터");
+        for(Terms.Bucket entry : callcenter.getBuckets()) {
+            if(StringUtils.equals(entry.getKey().toString(), "N")) continue;
+            if(StringUtils.equals(entry.getKey().toString(), "FRAUD")) fieldName.add("사기");
+            if(StringUtils.equals(entry.getKey().toString(), "DOUBTFUL")) fieldName.add("의심");
+            if(StringUtils.equals(entry.getKey().toString(), "COMPLETED")) fieldName.add("처리완료");
+            if(StringUtils.equals(entry.getKey().toString(), "IMPOSSIBLE")) fieldName.add("처리불가");
+            if(StringUtils.equals(entry.getKey().toString(), "ONGOING")) fieldName.add("처리중");
+           
+           count.add(entry.getDocCount());
+        }
+        chartMap.put("fieldName", fieldName)      ;  
+        chartMap.put("count", count)      ;  
+        client.close();
+        
+        return chartMap;
+        
+    }
+    
+    
+    /*
+     * 일일전문(message)
+     */
+    @RequestMapping("/servlet/nfds/dashboard/esTotalgauge.fds")
+    protected @ResponseBody HashMap<String, Object> esTotalgauge() throws Exception {
+        
+        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+        String rDate = df.format(System.currentTimeMillis());
+        RestHighLevelClient client = elasticSearchService.getClientOfSearchEngine();
+        HashMap<String, Object> chartMap = new HashMap<String, Object>();
+        
+        String indices [] = elasticSearchService.getIndicesForFdsDailyIndex("nacf",rDate, rDate);
+        String startDateTime = "now+9h/d";
+        String endDateTime = "now+9h/d";
+        
+        SearchRequest searchRequest = new SearchRequest();
+        SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
+        searchRequest.searchType(SearchType.QUERY_THEN_FETCH).indices(indices).indicesOptions(IndicesOptions.fromOptions(true, true, true, true));
+        
+        sourceBuilder.query(QueryBuilders.rangeQuery(FdsMessageFieldNames.LOG_DATE_TIME).from(startDateTime).to(endDateTime));                        // 아무런 조회조건이 없을 경우 전체 조회처리
+        searchRequest.source(sourceBuilder);
+        SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+        
+        long getDocCount = searchResponse.getHits().getTotalHits().value;
+        
+//        StringBuffer jsonObject = new StringBuffer(200);
+//        jsonObject.append("{");
+//        jsonObject.append(CommonUtil.getJsonObjectFieldDataForLongType(  "total",   String.valueOf(getDocCount)));
+//        jsonObject.append("}");
+        
+        chartMap.put("total", getDocCount);
+        client.close();
+        return chartMap;
+    }
+    
+    /*E/S TPS 
+     * 일일전문(message)
+     */
+    @RequestMapping("/servlet/nfds/dashboard/esTpsgauge.fds")
+    protected @ResponseBody HashMap<String, Object> esTpsgauge() throws Exception {
+        
+        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+        String rDate = df.format(System.currentTimeMillis());
+        RestHighLevelClient client = elasticSearchService.getClientOfSearchEngine();
+        HashMap<String, Object> chartMap = new HashMap<String, Object>();
+
+        
+        String indices [] = elasticSearchService.getIndicesForFdsDailyIndex("nacf",rDate, rDate);
+        String startDateTime = "now+9h-75s"; //둘 시간의 간격은 1분
+        String endDateTime = "now+9h-15s"; 
+        SearchRequest searchRequest = new SearchRequest();  
+        SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
+
+        searchRequest.searchType(SearchType.QUERY_THEN_FETCH).indices(indices).indicesOptions(IndicesOptions.fromOptions(true, true, true, true));
+        sourceBuilder.query(QueryBuilders.rangeQuery(FdsMessageFieldNames.LOG_DATE_TIME).from(startDateTime).to(endDateTime));                        // 아무런 조회조건이 없을 경우 전체 조회처리
+        searchRequest.source(sourceBuilder);
+        SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+        
+        long getDocCount = searchResponse.getHits().getTotalHits().value;
+        System.out.println(getDocCount+" 가져온데이터 갯수");
+        chartMap.put("tps", Math.round(getDocCount/60));
+        client.close();
+        return chartMap;
+    }
+    
+    /*
+     * 정책룰별 - 로그인(response)
+     */
+    @RequestMapping("/servlet/nfds/dashboard/ruledetection_login_state.fds")
+    protected @ResponseBody HashMap<String, Object> esRuleLoginChart() throws Exception {
+        
+        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+        String rDate = df.format(System.currentTimeMillis());
+        BoolQueryBuilder boolFilterBuilder = new BoolQueryBuilder();
+        RestHighLevelClient client = elasticSearchService.getClientOfSearchEngine();
+        HashMap<String, Object> chartMap = new HashMap<String, Object>();
+        String startDateTime = "now+9h/d";
+        String endDateTime = "now+9h/d";
+        String indices [] = elasticSearchService.getIndicesForFdsDailyIndex("nacf",rDate, rDate);
+        boolFilterBuilder.must( QueryBuilders.termQuery("ruleType"          , "로그인"));
+        boolFilterBuilder.mustNot(QueryBuilders.termsQuery("blockingType"          , "P","M"));
+        SearchRequest searchRequest = new SearchRequest();
+        SearchSourceBuilder sourcebuilder = new SearchSourceBuilder();
+        
+        searchRequest.searchType(SearchType.QUERY_THEN_FETCH).indices(indices).indicesOptions(IndicesOptions.fromOptions(true, true, true, true));
+        sourcebuilder.size(0);
+        sourcebuilder.query(QueryBuilders.boolQuery().must(QueryBuilders.rangeQuery(FdsMessageFieldNames.LOG_DATE_TIME).from(startDateTime).to(endDateTime)).filter( boolFilterBuilder));
+        TermsAggregationBuilder aggs1st                   = AggregationBuilders.terms("ruleName").field("ruleName").size(10);    //    AggregationBuilders.cardinality("E_FNC_USRID").field("E_FNC_USRID")
+        TermsAggregationBuilder aggs2nd                   = AggregationBuilders.terms("ruleId").field("ruleId").size(100);    //    AggregationBuilders.cardinality("E_FNC_USRID").field("E_FNC_USRID")
+        TermsAggregationBuilder aggs3rd_terms = AggregationBuilders.terms("blockingType").field("blockingType");    //    AggregationBuilders.cardinality("E_FNC_USRID").field("E_FNC_USRID")
+        sourcebuilder.aggregation(aggs1st.subAggregation(aggs3rd_terms.subAggregation(aggs2nd)));
+        searchRequest.source(sourcebuilder);
+        SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+        
+        long getDocCount = 0;
+        ArrayList<Object> fieldName = new ArrayList<Object>();
+        ArrayList<Object> blockingType_B = new ArrayList<Object>();
+        ArrayList<Object> blockingType_C = new ArrayList<Object>();
+        ArrayList<Object> blockingType_M = new ArrayList<Object>();
+//        ArrayList<Object> blockingType_P = new ArrayList<Object>();
+        
+        Terms terms     = searchResponse.getAggregations().get("ruleName");
+        
+        String ruleId = "";
+        String searchKeyWord = "";
+        for (Bucket b : terms.getBuckets()) {
+            Terms terms_1  = b.getAggregations().get("blockingType");
+            searchKeyWord = (String)b.getKey(); 
+            
+            long code_B = 0;
+            long code_C = 0;
+            long code_M = 0;
+//            long code_P = 0;
+                for (Bucket b1 : terms_1.getBuckets()) {
+                    getDocCount     = b1.getDocCount(); 
+                    String blockingType = (String)b1.getKey();
+                    Terms terms_2  = b1.getAggregations().get("ruleId");
+                    
+                    if(StringUtils.equals(blockingType, "B")){ code_B = getDocCount;}
+                    else if(StringUtils.equals(blockingType, "C")){ code_C = getDocCount;}
+                    else if(StringUtils.equals(blockingType, "M")){ code_M = getDocCount;}
+//                    else if(StringUtils.equals(blockingType, "P")){ code_P = getDocCount;}
+                    
+                    for (Bucket b2 : terms_2.getBuckets()) {
+                        ruleId= (String)b2.getKey();
+                        
+                    }
+                }
+                if(code_B >0 || code_C > 0 ) {
+                    blockingType_B.add(code_B);
+                    blockingType_C.add(code_C);
+                    blockingType_M.add(code_M);
+                    fieldName.add(searchKeyWord+":"+ruleId);
+                }
+//                blockingType_M.add(code_M);
+//                blockingType_P.add(code_P);
+            
+        }
+        
+        chartMap.put("fieldName", fieldName);
+        chartMap.put("value_B", blockingType_B);
+        chartMap.put("value_C", blockingType_C);
+        chartMap.put("value_M", blockingType_M);
+//        chartMap.put("value_P", blockingType_P);
+        client.close();
+        return chartMap;
+    }
+    
+    /*
+     * 정책룰별:스코어 - 로그인(response)
+     */
+    @RequestMapping("/servlet/nfds/dashboard/ruledetection_login_score_state.fds")
+    protected @ResponseBody HashMap<String, Object> esRuleLoginScoreChart() throws Exception {
+        
+        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+        String rDate = df.format(System.currentTimeMillis());
+        RestHighLevelClient client = elasticSearchService.getClientOfSearchEngine();
+        HashMap<String, Object> chartMap = new HashMap<String, Object>();
+        String startDateTime = "now+9h/d";
+        String endDateTime = "now+9h/d";
+        String indices [] = elasticSearchService.getIndicesForFdsDailyIndex("nacf",rDate, rDate);
+        ArrayList<Object> scoreCount = new ArrayList<Object>();
+        SearchRequest searchRequest = new SearchRequest();
+        SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
+        
+        searchRequest.searchType(SearchType.QUERY_THEN_FETCH).indices(indices).indicesOptions(IndicesOptions.fromOptions(true, true, true, true));
+        //1~20
+        for (int i = 0; i < 5; i++) {
+            BoolQueryBuilder boolFilterBuilder =  new BoolQueryBuilder();
+            boolFilterBuilder.must(QueryBuilders.termsQuery("RMS_SVC_C"          , "EAIPROGGR0","EAIPROGGR1","EAICROGGR0","EATBROGGR0"));
+            if(i == 0){
+                boolFilterBuilder.must(QueryBuilders.rangeQuery(FdsMessageFieldNames.TOTAL_SCORE).from(1).to(20));
+            }else if(i == 1){
+                boolFilterBuilder.must(QueryBuilders.rangeQuery(FdsMessageFieldNames.TOTAL_SCORE).from(21).to(40));
+            }else if(i == 2){
+                boolFilterBuilder.must(QueryBuilders.rangeQuery(FdsMessageFieldNames.TOTAL_SCORE).from(41).to(60));
+            }else if(i == 3){
+                boolFilterBuilder.must(QueryBuilders.rangeQuery(FdsMessageFieldNames.TOTAL_SCORE).from(61).to(80));
+            }else if(i == 4){
+                boolFilterBuilder.must(QueryBuilders.rangeQuery(FdsMessageFieldNames.TOTAL_SCORE).from(81));
+            }
+            sourceBuilder.query(QueryBuilders.boolQuery().must(QueryBuilders.rangeQuery(FdsMessageFieldNames.LOG_DATE_TIME).from(startDateTime).to(endDateTime)).filter(boolFilterBuilder));
+            
+            Logger.debug("[RealTimeChartController][getRealChart][Start] {} ", searchRequest);
+            searchRequest.source(sourceBuilder);
+            SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+            
+            Logger.debug("[RealTimeChartController][getRealChart][Start] {} ", searchResponse);
+            scoreCount.add(searchResponse.getHits().getTotalHits());
+            
+        }
+        
+        String [] fieldName = {"1~20","21~40","41~60","61~80","81이상"};
+        
+        chartMap.put("fieldName", fieldName);
+        chartMap.put("value_P", scoreCount);
+        client.close();
+        return chartMap;
+    }
+    
+    
+    /*
+     * 정책룰별:스코어 - 이체(response)
+     */
+    @RequestMapping("/servlet/nfds/dashboard/ruledetection_transfer_score_state.fds")
+    protected @ResponseBody HashMap<String, Object> esRuleTransferScoreChart() throws Exception {
+        
+        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+        String rDate = df.format(System.currentTimeMillis());
+        RestHighLevelClient client = elasticSearchService.getClientOfSearchEngine();
+        HashMap<String, Object> chartMap = new HashMap<String, Object>();
+        String startDateTime = "now+9h/d";
+        String endDateTime = "now+9h/d";
+        String indices [] = elasticSearchService.getIndicesForFdsDailyIndex("nacf",rDate, rDate);
+        ArrayList<Object> scoreCount = new ArrayList<Object>();
+        SearchRequest searchRequest = new SearchRequest();
+        SearchSourceBuilder sourcebuilder = new SearchSourceBuilder();
+        searchRequest.searchType(SearchType.QUERY_THEN_FETCH).indices(indices).indicesOptions(IndicesOptions.fromOptions(true, true, true, true));
+      	sourcebuilder.size(0);
+        for (int i = 0; i < 5; i++) {
+            BoolQueryBuilder boolFilterBuilder =  new BoolQueryBuilder();
+            boolFilterBuilder.must(QueryBuilders.termsQuery("RMS_SVC_C"          , "EAIPSIL0I0","EAIPSIL0I1","EAIPSIL0I2","EANBMM45I0","EAIPYE00I0","EAAPAT00I0","EANBMM44I0","EAICSIL0I0","EAICSIL0I1","EAICSIL0I2","EATBSIL0I0","EATBSIL0I1","EATBSIL0I2"));
+            if(i == 0){
+                boolFilterBuilder.must(QueryBuilders.rangeQuery(FdsMessageFieldNames.TOTAL_SCORE).from(1).to(20));
+            }else if(i == 1){
+                boolFilterBuilder.must(QueryBuilders.rangeQuery(FdsMessageFieldNames.TOTAL_SCORE).from(21).to(40));
+            }else if(i == 2){
+                boolFilterBuilder.must(QueryBuilders.rangeQuery(FdsMessageFieldNames.TOTAL_SCORE).from(41).to(60));
+            }else if(i == 3){
+                boolFilterBuilder.must(QueryBuilders.rangeQuery(FdsMessageFieldNames.TOTAL_SCORE).from(61).to(80));
+            }else if(i == 4){
+                boolFilterBuilder.must(QueryBuilders.rangeQuery(FdsMessageFieldNames.TOTAL_SCORE).from(81));
+            }
+            sourcebuilder.query(QueryBuilders.boolQuery().must(QueryBuilders.rangeQuery(FdsMessageFieldNames.LOG_DATE_TIME).from(startDateTime).to(endDateTime)).filter( boolFilterBuilder));
+            
+            Logger.debug("[RealTimeChartController][getRealChart][Start] {} ", searchRequest);
+            searchRequest.source(sourcebuilder);
+            SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+            
+            Logger.debug("[RealTimeChartController][getRealChart][Start] {} ", searchResponse);
+            scoreCount.add(searchResponse.getHits().getTotalHits().value);
+            
+        }
+        
+        String [] fieldName = {"1~20","21~40","41~60","61~80","81이상"};
+        
+        chartMap.put("fieldName", fieldName);
+        chartMap.put("value_P", scoreCount);
+        client.close();
+        return chartMap;
+    }
+    
+    
+    /*
+     * 추가인증/차단해제 성공(scoreinitialize)
+     */
+    @RequestMapping("/servlet/nfds/dashboard/scoreinitializestate.fds")
+    protected @ResponseBody HashMap<String, Object> esScoreBlockingChart() throws Exception {
+        
+        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+        String rDate = df.format(System.currentTimeMillis());
+        
+        RestHighLevelClient client = elasticSearchService.getClientOfSearchEngine();
+//        String startDateTime =  new StringBuffer().append(Date).append(" 00:00:00").toString();
+//        String endDateTime =  new StringBuffer().append(Date).append(" 23:59:59").toString();
+        String startDateTime =  "now+9h/d";
+        String endDateTime =  "now+9h/d";
+//        boolFilterBuilder.must( FilterBuilders.termFilter("ruleType"          , "이체"));
+        String indices [] = elasticSearchService.getIndicesForFdsDailyIndex("nacf",rDate, rDate);
+        
+        BoolQueryBuilder boolFilterBuilder =  new BoolQueryBuilder();
+        boolFilterBuilder.must(QueryBuilders.termsQuery(CommonConstants.FDS_SERVICE_CONTROL_FIELD_NAME_FOR_CONTROL_TYPE, "0","2","3","4"));
+        
+        HashMap<String, Object> chartMap = new HashMap<String, Object>();
+        ArrayList<Object> fieldName = new ArrayList<Object>();
+        ArrayList<Object> count = new ArrayList<Object>();
+        
+        SearchRequest searchRequest = new SearchRequest();
+        SearchSourceBuilder sourcebuilder =new SearchSourceBuilder();
+        sourcebuilder.size(0);
+        searchRequest.searchType(SearchType.QUERY_THEN_FETCH).indices(indices).indicesOptions(IndicesOptions.fromOptions(true, true, true, true));
+        
+        sourcebuilder.query(QueryBuilders.boolQuery().must(QueryBuilders.rangeQuery(FdsMessageFieldNames.LOG_DATE_TIME).from(startDateTime).to(endDateTime)).filter(boolFilterBuilder));
+//      searchRequest_aggs.setPostFilter(FilterBuilders.rangeFilter(FdsMessageFieldNames.LOG_DATE_TIME).from(startDateTime).to(endDateTime));      
+        sourcebuilder.aggregation(AggregationBuilders.terms("콜센터").field("workGbn").size(10));
+        searchRequest.source(sourcebuilder);
+        SearchResponse searchResponse =client.search(searchRequest, RequestOptions.DEFAULT);
+        
+        Terms callcenter = (Terms)searchResponse.getAggregations().getAsMap().get("콜센터");
+        for(Terms.Bucket entry : callcenter.getBuckets()) {
+            if(StringUtils.equals(entry.getKey().toString(), "")) continue;
+            if(StringUtils.equals(entry.getKey().toString(), "0")) fieldName.add("추가인증");
+            if(StringUtils.equals(entry.getKey().toString(), "2")) fieldName.add("차단");
+            if(StringUtils.equals(entry.getKey().toString(), "3")) fieldName.add("추가인증해제");
+            if(StringUtils.equals(entry.getKey().toString(), "4")) fieldName.add("재차단");
+           count.add(entry.getDocCount());
+        }
+        chartMap.put("fieldName", fieldName)      ;  
+        chartMap.put("count", count)      ;  
+        client.close();
+        
+        return chartMap;
+        
+    }
+    
+    /*
+     * 정책룰별 - 이체(response)
+     */
+    @RequestMapping("/servlet/nfds/dashboard/ruledetection_transfer_state.fds")
+    protected @ResponseBody HashMap<String, Object> esRuleTranferChart() throws Exception {
+        
+        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+        String rDate = df.format(System.currentTimeMillis());
+        BoolQueryBuilder boolFilterBuilder = new BoolQueryBuilder();
+        RestHighLevelClient client = elasticSearchService.getClientOfSearchEngine();
+        HashMap<String, Object> chartMap = new HashMap<String, Object>();
+        String startDateTime = "now+9h/d";
+        String endDateTime = "now+9h/d";
+        String indices [] = elasticSearchService.getIndicesForFdsDailyIndex("nacf",rDate, rDate);
+        String ruleType [] = {"이체완료","이체선조회"};
+        boolFilterBuilder.must( QueryBuilders.termQuery("ruleType"          , ruleType));
+        boolFilterBuilder.mustNot(QueryBuilders.termQuery("blockingType"          , "P"));
+        SearchRequest searchRequest = new SearchRequest();
+        SearchSourceBuilder sourcebuilder = new SearchSourceBuilder();
+        sourcebuilder.size(0);
+        searchRequest.searchType(SearchType.QUERY_THEN_FETCH).indices(indices).indicesOptions(IndicesOptions.fromOptions(true, true, true, true));
+        
+        sourcebuilder.query(QueryBuilders.boolQuery().must(QueryBuilders.rangeQuery(FdsMessageFieldNames.LOG_DATE_TIME).from(startDateTime).to(endDateTime)).filter( boolFilterBuilder));
+        TermsAggregationBuilder aggs1st                   = AggregationBuilders.terms("ruleName").field("ruleName").size(10);    //    AggregationBuilders.cardinality("E_FNC_USRID").field("E_FNC_USRID")
+        TermsAggregationBuilder aggs2nd                   = AggregationBuilders.terms("ruleId").field("ruleId").size(100);    //    AggregationBuilders.cardinality("E_FNC_USRID").field("E_FNC_USRID")
+        TermsAggregationBuilder aggs3rd_terms = AggregationBuilders.terms("blockingType").field("blockingType");    //    AggregationBuilders.cardinality("E_FNC_USRID").field("E_FNC_USRID")
+        sourcebuilder.aggregation(aggs1st.subAggregation(aggs3rd_terms.subAggregation(aggs2nd)));
+        searchRequest.source(sourcebuilder);
+        SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+        
+        long getDocCount = 0;
+        ArrayList<Object> fieldName = new ArrayList<Object>();
+        ArrayList<Object> blockingType_B = new ArrayList<Object>();
+        ArrayList<Object> blockingType_C = new ArrayList<Object>();
+        ArrayList<Object> blockingType_M = new ArrayList<Object>();
+//        ArrayList<Object> blockingType_P = new ArrayList<Object>();
+        
+        Terms terms     = searchResponse.getAggregations().get("ruleName");
+        
+        String ruleId = "";
+        String searchKeyWord = "";
+        for (Bucket b : terms.getBuckets()) {
+            Terms terms_1  = b.getAggregations().get("blockingType");
+            searchKeyWord = (String)b.getKey(); 
+            
+            long code_B = 0;
+            long code_C = 0;
+            long code_M = 0;
+//            long code_P = 0;
+                for (Bucket b1 : terms_1.getBuckets()) {
+                    getDocCount     = b1.getDocCount(); 
+                    String blockingType = (String)b1.getKey();
+                    Terms terms_2  = b1.getAggregations().get("ruleId");
+                    
+                    if(StringUtils.equals(blockingType, "B")){ code_B = getDocCount;}
+                    else if(StringUtils.equals(blockingType, "C")){ code_C = getDocCount;}
+//                    else if(StringUtils.equals(blockingType, "M")){ code_M = getDocCount;}
+//                    else if(StringUtils.equals(blockingType, "P")){ code_P = getDocCount;}
+                    
+                    for (Bucket b2 : terms_2.getBuckets()) {
+                        ruleId= (String)b2.getKey();
+                        
+                    }
+                }
+                if(code_B >0 || code_C > 0 ) {
+                    blockingType_B.add(code_B);
+                    blockingType_C.add(code_C);
+                    blockingType_M.add(code_M);
+                    fieldName.add(searchKeyWord+":"+ruleId);
+                }
+//                blockingType_M.add(code_M);
+//                blockingType_P.add(code_P);
+        }
+        
+        chartMap.put("fieldName", fieldName);
+        chartMap.put("value_B", blockingType_B);
+        chartMap.put("value_C", blockingType_C);
+        chartMap.put("value_M", blockingType_M);
+//        chartMap.put("value_P", blockingType_P);
+        client.close();
+        return chartMap;
+    }
+}

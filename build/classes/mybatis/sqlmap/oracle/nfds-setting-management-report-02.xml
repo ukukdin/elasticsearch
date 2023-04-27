@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding= "UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+ 
+<mapper namespace="nurier.scraping.setting.dao.ReportSqlMapper">
+
+    <sql id="ReportColumn">
+          SEQ_NUM       AS seq_num
+        , NAME          AS name
+        , GROUPCODE     AS groupcode
+        , QUERY         AS query
+        , TYPE          AS type
+        , IS_USED       AS is_used
+        , RGDATE        AS rgdate
+        , RGNAME        AS rgname
+        , MODDATE       AS moddate
+        , MODNAME       AS modname
+    </sql>
+
+
+    <select id="getReportList" parameterType="reportVO" resultType="reportVO">
+        SELECT 
+            <include refid="ReportColumn" />
+        FROM NFDS_REPORT
+    </select>
+
+    <select id="getReportInfo" parameterType="reportVO" resultType="reportVO">
+        SELECT 
+            <include refid="ReportColumn" />
+        FROM NFDS_REPORT
+        WHERE SEQ_NUM = #{seq_num}
+    </select>
+    
+    <insert id="setReportInsert" parameterType="reportVO" >
+        <selectKey resultType="String" keyProperty="seq_num" order="BEFORE">
+            SELECT NVL(MAX(SEQ_NUM),0)+1 as seq_num FROM NFDS_REPORT
+        </selectKey>
+        INSERT INTO NFDS_REPORT (
+              SEQ_NUM
+            , NAME
+            , GROUPCODE
+            , QUERY
+            , TYPE
+            , IS_USED
+            , RGDATE
+            , RGNAME
+        ) VALUES ( 
+              #{seq_num}
+            , #{name}
+            , #{groupcode}
+            , #{query}
+            , #{type}
+            , #{is_used}
+            , SYSDATE
+            , #{rgname}
+        )
+    </insert>
+    
+    <update id="setReportUpdate" parameterType="reportVO">
+        UPDATE NFDS_REPORT SET
+              NAME         = #{name}
+            , GROUPCODE    = #{groupcode}
+            , QUERY        = #{query}
+            , TYPE         = #{type}
+            , IS_USED      = #{is_used}
+            , MODDATE      = SYSDATE
+            , MODNAME      = #{modname}
+        WHERE SEQ_NUM = #{seq_num}
+    </update>
+
+    <delete id="setReportDelete" parameterType="reportVO">
+        DELETE NFDS_REPORT
+        WHERE SEQ_NUM = #{seq_num}
+    </delete>
+
+</mapper>

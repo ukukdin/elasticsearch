@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding= "UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+ 
+<mapper namespace="com.nurier.web.nfds.setting.dao.SettingMyMonitoringDataManageSqlMapper">
+
+    <select id="getDashBoardUserInfo" parameterType="dashBoardDataVO" resultType="dashBoardDataVO">
+        select 
+          user_dash_no, 
+          dash_useyn,
+          dash_name,
+          dash_auth_useyn,
+          rank() over(order by b.user_dash_no) as rnum
+        from NFDS_USER A, NFDS_DASHBOARD_MST B
+        where a.user_id = b.userid
+        and b.userid = #{userid}
+        order by user_dash_no
+    </select>
+    
+    <select id="getMyMonitoringInfo" parameterType="dashBoardDataVO" resultType="dashBoardDataVO">
+        select 
+          user_dash_no, 
+          dash_useyn,
+          dash_name,
+          dash_auth_useyn,
+          rank() over(order by b.user_dash_no) as rnum
+        from NFDS_USER A, NFDS_DASHBOARD_MST B
+        where a.user_id = b.userid
+        and b.userid = #{userid}
+        and b.dash_useyn = #{dash_useyn}
+        order by user_dash_no
+    </select>
+    
+    <select id="getDashBoardDescCnt" parameterType="dashBoardDataVO" resultType="dashBoardDataVO">
+        select 
+          count(b.user_dash_no) as dashCnt
+        from NFDS_DASHBOARD_MST a, nfds_dashboard_desc b
+        where a.userid = b.userid
+        and a.user_dash_no = b.user_dash_no
+        and b.userid = #{userid}
+        and b.user_dash_no = #{user_dash_no}
+    </select>
+    
+    <select id="getDashBoardUserNo" parameterType="dashBoardDataVO" resultType="dashBoardDataVO">
+        select 
+            nvl(min(b.user_dash_no), 0) as user_dash_no, 
+            nvl(max(b.user_dash_no),0) as user_dash_max
+        from NFDS_USER A, NFDS_DASHBOARD_MST B
+        where a.user_id = b.userid
+        and b.userid = #{userid}
+    </select>
+    
+    <select id="getMyMonitoringUserNo" parameterType="dashBoardDataVO" resultType="dashBoardDataVO">
+        select 
+            nvl(min(b.user_dash_no), 0) as user_dash_no, 
+            nvl(max(b.user_dash_no),0) as user_dash_max
+        from NFDS_USER A, NFDS_DASHBOARD_MST B
+        where a.user_id = b.userid
+        and b.userid = #{userid}
+        and b.dash_useyn = #{dash_useyn}
+    </select>
+    
+    <select id="getDashBoardUseYn" parameterType="dashBoardDataVO" resultType="dashBoardDataVO">
+        select dash_useyn, dash_auth_useyn, user_dash_no
+        from NFDS_DASHBOARD_MST
+        where userid = #{userid}
+        and user_dash_no = #{user_dash_no}
+    </select>
+    
+    <select id="getDashBoardMaxPIdInfo" parameterType="dashBoardDataVO" resultType="dashBoardDataVO">
+        select max(b.desc_p_id) as max_p_id
+        from NFDS_DASHBOARD_MST a, NFDS_DASHBOARD_DESC b
+        WHERE a.user_dash_no = b.user_dash_no
+        and a.userid = b.userid
+        and a.userid = #{userid}
+        and b.user_dash_no = #{user_dash_no}
+    </select>
+    
+    <select id="getDashBoardDataInfo" parameterType="dashBoardDataVO" resultType="dashBoardDataVO">
+        select 
+          a.user_dash_no,
+          b.mst_p_id,
+          b.desc_p_id,
+          b.desc_p_name,
+          b.mst_p_w,
+          b.desc_p_h,
+          b.mst_p_row,
+          b.desc_a_h,
+          b.dash_chart_no,
+          b.dash_chart_type
+        from NFDS_DASHBOARD_MST a, NFDS_DASHBOARD_DESC b
+        where a.user_dash_no = b.user_dash_no
+        and a.userid = b.userid
+        and a.userid = #{userid}
+        and b.user_dash_no = #{user_dash_no}
+        order by b.mst_p_id, b.mst_p_row
+    </select>
+    
+    
+    <delete id="setDashBoardInfoDelete" parameterType="dashBoardDataVO">
+        DELETE FROM NFDS_DASHBOARD_DESC
+        WHERE userid = #{userid}
+        AND user_dash_no = #{user_dash_no}
+    </delete>
+    
+    <delete id="setDashBoardMstDelete" parameterType="dashBoardDataVO">
+        DELETE FROM NFDS_DASHBOARD_MST
+        WHERE USERID = #{userid}
+        AND USER_DASH_NO = #{user_dash_no}
+    </delete>
+    
+    
+    <insert id="setDashBoardMstInsert" parameterType="dashBoardDataVO">
+        <selectKey resultType="String" keyProperty="seq_num" order="BEFORE">
+            SELECT NVL(MAX(SEQ_NUM),0)+1 as seq_num FROM NFDS_DASHBOARD_MST
+        </selectKey>
+       
+        INSERT INTO NFDS_DASHBOARD_MST (
+            SEQ_NUM,
+            USERID,
+            USER_DASH_NO,
+            DASH_USEYN,
+            DASH_NAME,
+            DASH_AUTH_USEYN
+        ) VALUES (
+            #{seq_num},
+            #{userid},
+            #{user_dash_no},
+            #{dash_useyn},
+            #{dash_name},
+            #{dash_auth_useyn}
+        )
+    </insert>
+    
+    <insert id="setDashBoardDataInsert" parameterType="dashBoardDataVO">
+        <selectKey resultType="String" keyProperty="seq_num" order="BEFORE">
+            SELECT NVL(MAX(SEQ_NUM),0)+1 as seq_num FROM NFDS_DASHBOARD_DESC
+        </selectKey>
+       
+        INSERT INTO NFDS_DASHBOARD_DESC (
+            SEQ_NUM,
+            USERID,
+            USER_DASH_NO,
+            MST_P_ID,
+            MST_P_W,
+            DESC_A_H,
+            DESC_P_ID,
+            DESC_P_H,
+            MST_P_ROW,
+            DASH_CHART_NO,
+            DESC_P_NAME,
+            DASH_CHART_TYPE
+        ) VALUES (
+            #{seq_num},
+            #{userid},
+            #{user_dash_no},
+            #{mst_p_id},
+            #{mst_p_w},
+            #{desc_a_h},
+            #{desc_p_id},
+            #{desc_p_h},
+            #{mst_p_row},
+            #{dash_chart_no},
+            #{desc_p_name},
+            #{dash_chart_type}
+        )
+    </insert>
+    
+    
+    <update id="setUserDashUseUpdate" parameterType="dashBoardDataVO">
+        UPDATE NFDS_DASHBOARD_MST SET
+            dash_useyn  = #{dash_useyn},
+            dash_auth_useyn  = #{dash_auth_useyn} 
+         WHERE USERID = #{userid}
+         AND USER_DASH_NO = #{user_dash_no}
+    </update>
+    
+    
+    <select id="getChartType" parameterType="dashBoardDataVO" resultType="dashBoardDataVO">
+        SELECT 
+            CHARTLAYOUT AS dash_chart_type
+        FROM NFDS_REPORT
+        WHERE SEQ_NUM = #{seq_num}
+    </select>
+    
+    
+    <update id="setDashboardChangeName" parameterType="dashBoardDataVO">
+        UPDATE NFDS_DASHBOARD_MST SET
+            dash_name  = #{dash_name}
+        WHERE USERID = #{userid}
+        AND USER_DASH_NO = #{user_dash_no}
+    </update>
+    
+</mapper>

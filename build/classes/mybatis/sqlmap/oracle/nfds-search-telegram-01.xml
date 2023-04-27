@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding= "UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+
+<mapper namespace="nurier.scraping.search.dao.SearchForTelegramSqlMapper">
+
+    <!-- 검색어 히스토리에 등록처리 -->
+    <insert id="registerSearchQueryInHistory" parameterType="java.util.HashMap">
+        <![CDATA[
+        INSERT INTO NFDS_SEARCH_QUERY_HISTORY (
+            REGISTRATIONDATE,
+            USERID,
+            SEARCHQUERYNAME,
+            SEARCHQUERY
+        ) VALUES (
+            #{registrationDate},
+            #{userId},
+            #{searchQueryName},
+            #{searchQuery}
+        )
+        ]]>
+    </insert>
+    
+    
+    <!-- 검색어 히스토리 가져오기 -->
+    <select id="getListOfSearchQueryHistories" parameterType="string" resultType="java.util.HashMap">
+        SELECT
+            REGISTRATIONDATE AS REGISTRATION_DATE,
+            SEARCHQUERYNAME  AS SEARCH_QUERY_NAME,
+            SEARCHQUERY      AS SEARCH_QUERY
+        FROM
+            NFDS_SEARCH_QUERY_HISTORY
+        WHERE
+            USERID = #{userId}
+        ORDER BY
+            REGISTRATIONDATE ASC
+    </select>
+    
+    
+    <!-- 검색어 히스토리 삭제 -->
+    <delete id="deleteSearchQueryHistory" parameterType="java.util.HashMap">
+        DELETE FROM
+            NFDS_SEARCH_QUERY_HISTORY
+        WHERE 
+            REGISTRATIONDATE = #{registrationDate} AND USERID = #{userId}
+    </delete>
+
+</mapper>
+
+
+

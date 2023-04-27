@@ -1,0 +1,124 @@
+package nurier.scraping.search.controller;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.ibatis.session.SqlSession;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.ModelAndView;
+
+import nurier.scraping.common.util.DateUtil;
+import nurier.scraping.search.service.AccidentProtectionAmountService;
+import nurier.scraping.setting.dao.EsManagementSqlMapper;
+
+/**
+ * Description  : 사고예방금액 조회 처리용 Controller class
+ * ----------------------------------------------------------------------
+ * 날짜         작업자            수정내역
+ * ----------------------------------------------------------------------
+ * 2014.07.01   scseo             신규생성
+ */
+
+@Controller
+public class AccidentProtectionAmountController {
+    private static final Logger Logger = LoggerFactory.getLogger(AccidentProtectionAmountController.class);
+    
+    @Autowired
+    AccidentProtectionAmountService  accidentProtectionAmountService;
+    
+    @Autowired
+    private SqlSession sqlSession;
+    
+    //CONSTANTS for CallCenterController
+    private static final String HISTORYSEARCH      = "historySearch";
+    
+    /**
+     * 사고예방금액 조회페이지로 이동처리 (scseo)
+     * @return
+     * @throws Exception
+     */
+    @RequestMapping("/servlet/nfds/search/accident_protection_amount/accident_protection_amount.fds")
+    public String goToAccidentProtectionAmount() throws Exception {
+        Logger.debug("[AccidentProtectionAmountController][METHOD : goToAccidentProtectionAmount][EXECUTION]");
+        
+        return "scraping/search/accident_protection_amount/accident_protection_amount.tiles";
+    }
+    
+    
+    /**
+     * 사고예방금액 조회결과 처리 (scseo)
+     * @param reqParamMap
+     * @return
+     * @throws Exception
+     */
+    @RequestMapping("/servlet/nfds/search/accident_protection_amount/list_of_accident_protection_amounts.fds")
+    public ModelAndView getListOfAccidentProtectionAmounts(@RequestParam Map<String,String> reqParamMap) throws Exception {
+        Logger.debug("[AccidentProtectionAmountController][METHOD : getListOfAccidentProtectionAmounts][EXECUTION]");
+        
+        String pageNumberRequested  = StringUtils.defaultIfBlank(reqParamMap.get("pageNumberRequested"), "1");
+        String numberOfRowsPerPage  = StringUtils.defaultIfBlank(reqParamMap.get("numberOfRowsPerPage"), "10");
+        int    offset               = Integer.parseInt(numberOfRowsPerPage);
+        int    start                = (Integer.parseInt(pageNumberRequested) - 1) * offset;
+        Logger.debug("[AccidentProtectionAmountController][METHOD : getListOfAccidentProtectionAmounts][start  : {}]", start);
+        Logger.debug("[AccidentProtectionAmountController][METHOD : getListOfAccidentProtectionAmounts][offset : {}]", offset);
+
+        EsManagementSqlMapper 			  sqlMapper 			  = sqlSession.getMapper(EsManagementSqlMapper.class);
+    	
+        HashMap<String,Object> param = new HashMap<String,Object>();
+        
+        String fromDateTime	 = DateUtil.getFormattedDateTimeHH24(reqParamMap.get("startDateFormatted"), reqParamMap.get("startTimeFormatted"));
+        String toDateTime	 = DateUtil.getFormattedDateTimeHH24(reqParamMap.get("endDateFormatted"), reqParamMap.get("endTimeFormatted"));
+        param.put("fromDateTime", 		fromDateTime.toString()									);
+        param.put("toDateTime", 		toDateTime.toString()									);
+        
+        ArrayList<HashMap<String, Object>> informationParam = sqlMapper.getList(param);
+        String nodeName 	= informationParam.get(0).get("NODEINFO").toString();
+        String clusterName 	= informationParam.get(0).get("CLUSTERNAME").toString();
+        
+        // FDS_MST 기준으로 화면에 표시
+    	reqParamMap.put("serverInfo", 		nodeName	 );
+    	reqParamMap.put("clusterName", 		clusterName	 );
+    	reqParamMap.put("pageName", 		HISTORYSEARCH);
+    	
+    	Logger.debug("[ElasticSearchService][getLogDataOfFdsMst][EXECUTION][BEGIN][reqParamMap value] : {}", reqParamMap.toString());        
+    	Logger.debug("[ElasticSearchService][getLogDataOfFdsMst][EXECUTION][BEGIN][informationParam.size()] : {}", informationParam.size());
+        
+        ModelAndView mav = new ModelAndView();
+        mav.setViewName("scraping/search/accident_protection_amount/list_of_accident_protection_amounts");
+
+        accidentProtectionAmountService.getListOfAccidentProtectionAmounts(mav, reqParamMap);
+        mav.addObject("clusterSize",   			  informationParam.size());
+        mav.addObject("serverInfo",   			  nodeName);
+        mav.addObject("clusterName",   			  clusterName);
+        if(informationParam.size() > 1){
+	        mav.addObject("fromDateTime",   		  reqParamMap.get("startDateFormatted") + " " + reqParamMap.get("startTimeFormatted")	);
+	        mav.addObject("toDateTime",   			  reqParamMap.get("endDateFormatted") + " " + reqParamMap.get("endTimeFormatted")		);
+	        mav.addObject("WK_DTM_0",   			  informationParam.get(0).get("WK_DTM").toString()										);
+	        mav.addObject("LSCHG_DTM_0",   			  informationParam.get(0).get("LSCHG_DTM").toString()									);
+	        mav.addObject("WK_DTM_1",   			  informationParam.get(1).get("WK_DTM").toString()										);
+	        mav.addObject("LSCHG_DTM_1",   			  informationParam.get(1).get("LSCHG_DTM").toString()									);
+	        
+	        Logger.debug("[ElasticSearchService][getLogDataOfFdsMst][EXECUTION][BEGIN][informationParam.size()] : {}", informationParam.get(0).get("WK_DTM").toString());
+	        Logger.debug("[ElasticSearchService][getLogDataOfFdsMst][EXECUTION][BEGIN][informationParam.size()] : {}", informationParam.get(0).get("LSCHG_DTM").toString());
+	        Logger.debug("[ElasticSearchService][getLogDataOfFdsMst][EXECUTION][BEGIN][informationParam.size()] : {}", informationParam.get(1).get("WK_DTM").toString());
+	        Logger.debug("[ElasticSearchService][getLogDataOfFdsMst][EXECUTION][BEGIN][informationParam.size()] : {}", informationParam.get(1).get("LSCHG_DTM").toString());
+	        Logger.debug("[ElasticSearchService][getLogDataOfFdsMst][EXECUTION][BEGIN][informationParam.size()] : {}", reqParamMap.get("startDateFormatted") + " " + reqParamMap.get("startTimeFormatted"));
+	        Logger.debug("[ElasticSearchService][getLogDataOfFdsMst][EXECUTION][BEGIN][informationParam.size()] : {}", reqParamMap.get("endDateFormatted") + " " + reqParamMap.get("endTimeFormatted"));
+	        Logger.debug("[ElasticSearchService][getLogDataOfFdsMst][EXECUTION][BEGIN][informationParam.size()] : {}", informationParam.size());
+	        
+        }
+      //String totalNumberOfDocuments = String.valueOf(mav.getModelMap().get("totalNumberOfAccidentProtectionAmounts"));
+        return mav;
+    }
+    
+    
+} // end of class
+
+

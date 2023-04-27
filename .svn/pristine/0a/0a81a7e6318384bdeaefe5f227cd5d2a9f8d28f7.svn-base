@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- path /src/main/resources/logback.xml -->
+<configuration debug="true"> 
+    <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <!-- 로그시간 + 패키지 및 클래스명 + 메소드명 + 메소드내에 로그위치 + 로깅메시지 -->
+            <!-- <pattern>%d{HH:mm:ss.SSS} %-5level %logger[%method:%line] - %msg%n</pattern> -->
+            <!-- <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %logger[%C{1}.%M:%L] - %msg%n</pattern> -->
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %logger[%M:%L] - %msg%n</pattern>
+        </encoder>
+    </appender>
+    
+    <!-- Log4j level -->
+    <!-- ALL > TRACE > DEBUG > INFO > WARN > ERROR > FATAL > OFF -->
+
+    
+    <logger name="nurier.antiscraping.weblog" level="ALL"/>
+    <logger name="nurier.scraping" level="DEBUG"/>
+
+    <logger name="org.springframework" level="WARN"/>
+    <logger name="org.springframework.security" level="INFO"/>
+    <logger name="org.springframework.web.servlet.DispatcherServlet" level="INFO"/>
+    <logger name="org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping" level="INFO"/>
+    
+    
+    <logger name="org.apache.commons.digester" level="INFO"/>
+
+    <logger name="java.sql" level="DEBUG"/>
+
+    <logger name="org.quartz" level="WARN"/>
+    
+    <!-- 
+    <logger name="com.ibatis" level="ERROR"/>
+    
+    
+    <logger name="org.apache.catalina" level="OFF"/>
+    
+    <logger name="io.netty" level="ERROR"/>
+    
+    <logger name="org.springframework" level="ERROR"/>
+     -->
+    
+    <!-- 기본 로그 레벨  -->
+    <root level="OFF">
+        <appender-ref ref="console" />
+    </root>
+</configuration>
+

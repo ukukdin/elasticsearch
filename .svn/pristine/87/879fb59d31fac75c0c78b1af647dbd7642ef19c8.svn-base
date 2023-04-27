@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding= "UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+ 
+<mapper namespace="nurier.scraping.setting.dao.RemoteProgramManagementSqlMapper">
+    
+    <select id="getListOfRemotePrograms" resultType="java.util.HashMap">
+        <include refid="paging.headerPagingStart"/>
+        SELECT
+            TO_CHAR(OID) as OID,
+            PGMNAM       as PROGRAM_NAME,
+            PROCESNAM    as PROCESS_NAME,
+            LOCALPORT    as LOCAL_PORT,
+            REMOTPORT    as REMOTE_PORT,
+            REMARK       as REMARK,
+            CREATEDATE   as CREATE_DATE,
+            CREATEUSER   as CREATE_USER
+        FROM
+            NFDS_REMOTE_BLACKLIST
+        WHERE
+            1=1
+        <if test="PROGRAM_NAME != null and PROGRAM_NAME != '' ">
+            AND PGMNAM = #{PROGRAM_NAME}
+        </if>
+        <if test="PROCESS_NAME != null and PROCESS_NAME != '' ">
+            AND PROCESNAM = #{PROCESS_NAME}
+        </if>
+        <if test="LOCAL_PORT != null and LOCAL_PORT != '' ">
+            AND LOCALPORT = #{LOCAL_PORT}
+        </if>
+        <if test="REMOTE_PORT != null and REMOTE_PORT != '' ">
+            AND REMOTPORT = #{REMOTE_PORT}
+        </if>
+        <if test="CREATE_USER != null and CREATE_USER != '' ">
+            AND CREATEUSER = #{CREATE_USER}
+        </if>
+        ORDER BY CREATEDATE DESC
+        <include refid="paging.footerPagingEnd"/>
+    </select>
+    
+    <select id="getRemoteProgram" parameterType="string" resultType="java.util.HashMap">
+        SELECT
+            TO_CHAR(OID) as OID,
+            PGMNAM       as PROGRAM_NAME,
+            PROCESNAM    as PROCESS_NAME,
+            LOCALPORT    as LOCAL_PORT,
+            REMOTPORT    as REMOTE_PORT,
+            REMARK       as REMARK,
+            CREATEDATE   as CREATE_DATE,
+            CREATEUSER   as CREATE_USER
+        FROM
+            NFDS_REMOTE_BLACKLIST
+        WHERE
+            OID = #{OID}
+    </select>
+    
+    <insert id="registerRemoteProgram" parameterType="java.util.HashMap">
+        INSERT INTO NFDS_REMOTE_BLACKLIST (
+            OID,
+            PGMNAM,
+            PROCESNAM,
+            LOCALPORT,
+            REMOTPORT,
+            REMARK,
+            CREATEDATE,
+            CREATEUSER
+        ) VALUES (
+            #{OID},
+            #{PROGRAM_NAME},
+            #{PROCESS_NAME},
+            #{LOCAL_PORT},
+            #{REMOTE_PORT},
+            #{REMARK},
+            TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'),
+            #{CREATE_USER}
+        )
+    </insert>
+    
+    <update id="editRemoteProgram" parameterType="java.util.HashMap">
+        UPDATE NFDS_REMOTE_BLACKLIST
+        <set>
+            <if test="REMARK != null">
+              REMARK            = #{REMARK}
+            </if>
+        </set>
+        WHERE OID = #{OID}
+    </update>
+    
+    <delete id="deleteRemoteProgram" parameterType="string">
+        DELETE FROM NFDS_REMOTE_BLACKLIST
+        WHERE OID = #{OID}
+    </delete>
+    
+    <select id="getNumberOfRemoteProgramDuplicated" parameterType="string" resultType="int">
+        SELECT
+            COUNT(PROCESNAM) AS COUNT
+        FROM
+            NFDS_REMOTE_BLACKLIST
+        WHERE
+            PROCESNAM = #{PROCESS_NAME}
+    </select>
+    
+    <select id="getNextSequenceNumber" resultType="string">
+        SELECT
+            NVL(MAX(OID),0)+1 AS OID
+        FROM
+            NFDS_REMOTE_BLACKLIST
+    </select>
+    
+</mapper>

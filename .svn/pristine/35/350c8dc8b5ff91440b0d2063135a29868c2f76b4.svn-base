@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding= "UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+ 
+<mapper namespace="com.nurier.web.nfds.setting.dao.ReportManagementSqlMapper">
+
+    <!-- 모든 보고서 반환 -->
+    <select id="getListOfReports" resultType="java.util.HashMap">
+        SELECT
+            TO_CHAR(SEQ_NUM)    AS SEQ_NUM,
+            NAME                AS NAME,
+            GROUPCODE           AS GROUP_CODE,
+            QUERY               AS QUERY,
+            TYPE                AS TYPE,
+            IS_USED             AS IS_USED,
+            RGDATE              AS RG_DATE,
+            RGNAME              AS RG_NAME,
+            MODDATE             AS MOD_DATE,
+            MODNAME             AS MOD_NAME
+        FROM
+            NFDS_REPORT
+        ORDER BY
+            SEQ_NUM DESC
+    </select>
+    
+
+    <!-- 해당 보고서종류에 속하는 모든 보고서 반환 -->
+    <select id="getListOfReportTypes" parameterType="string" resultType="java.util.HashMap">
+        SELECT
+            GRPCOD AS REPORT_TYPE_CODE,
+            GRPNAM AS REPORT_TYPE_NAME
+        FROM
+            NFDS_GROUP_CODE
+        WHERE
+            PARENT = #{codeOfReportType}
+        ORDER BY
+            SEQ_NUM ASC
+    </select>
+
+
+    <!-- 하나의 보고서 정보 반환 -->
+    <select id="getReport" parameterType="string" resultType="java.util.HashMap">
+        SELECT
+            TO_CHAR(R.SEQ_NUM)    AS SEQ_NUM,
+            R.NAME                AS NAME,
+            R.GROUPCODE           AS GROUP_CODE,
+            R.QUERY               AS QUERY,
+            R.TYPE                AS TYPE,
+            R.IS_USED             AS IS_USED,
+            R.RGDATE              AS RG_DATE,
+            R.RGNAME              AS RG_NAME,
+            R.MODDATE             AS MOD_DATE,
+            R.MODNAME             AS MOD_NAME,
+            R.REFRESHINGTIME      AS REFRESHINGTIME,
+            R.CHARTLAYOUT         AS CHARTLAYOUT,
+            R.TABULATE            AS TABULATE,
+            (SELECT 
+                DISTINCT Q.HEAD_NUM 
+                FROM NFDS_QUERY_DT Q
+                WHERE R.SEQ_NUM = Q.HEAD_NUM
+                AND Q.USE_MENU = 'R'
+            ) AS QUERY_SEQ
+        FROM
+            NFDS_REPORT R
+        WHERE
+            R.SEQ_NUM = #{seqOfReport}
+    </select>
+
+
+    <!-- 새로운 보고서 등록처리 -->
+    <insert id="createNewReport" parameterType="java.util.HashMap">
+    
+        <selectKey resultType="String" keyProperty="seqNum" order="BEFORE">
+            SELECT NVL(MAX(SEQ_NUM),0)+1 AS SEQ_NUM FROM NFDS_REPORT
+        </selectKey>
+        
+        <![CDATA[
+        INSERT INTO NFDS_REPORT (
+            SEQ_NUM,
+            NAME,
+            GROUPCODE,
+            QUERY,
+            IS_USED,
+            RGNAME,
+            RGDATE,
+            REFRESHINGTIME,
+            CHARTLAYOUT,
+            TABULATE
+        ) VALUES (
+            #{seqNum},
+            #{reportName},
+            #{reportTypeCode},
+            #{queryOfReport},
+            #{isUsed},
+            #{registrant},
+            SYSDATE,
+            #{refreshingTime},
+            #{chartLayout},
+            #{tabulate}
+        )
+        ]]>
+    </insert>
+
+
+    <!-- 보고서 수정 처리 -->
+    <update id="editReport" parameterType="reportVO">
+        <![CDATA[
+        UPDATE
+            NFDS_REPORT
+        SET
+            NAME            = #{reportName},
+            GROUPCODE       = #{reportTypeCode},
+            QUERY           = #{queryOfReport},
+            IS_USED         = #{isUsed},
+            MODDATE         = SYSDATE,
+            MODNAME         = #{registrant},
+            REFRESHINGTIME  = #{refreshingTime},
+            CHARTLAYOUT     = #{chartLayout},
+            TABULATE        = #{tabulate}
+        WHERE 
+            SEQ_NUM         = #{seqOfReport}
+        ]]>
+    </update>
+    
+    
+
+    <!-- 보고서 삭제처리 -->
+    <delete id="deleteReport" parameterType="string">
+        DELETE FROM
+            NFDS_REPORT
+        WHERE
+            SEQ_NUM = #{seqOfReport}
+    </delete>
+    
+    
+    <select id="getReportMaxCode" parameterType="java.util.HashMap" resultType="string">
+        SELECT DECODE(LPAD(TO_CHAR(MAX(GROUPCODE) + 1), #{parentlength}, '0'), null, CONCAT(#{parent},'001'), LPAD(TO_CHAR(MAX(GROUPCODE) + 1), #{parentlength}, '0')) GRPCOD_MAX
+        FROM NFDS_REPORT
+        WHERE LENGTH(GROUPCODE) = #{parentlength}
+        <if test='parent != ""'>
+        AND GROUPCODE LIKE CONCAT(#{parent},'%')
+        </if> 
+    </select>
+    
+    <!-- 새로운 보고서폴더 등록처리 -->
+    <insert id="createNewReportfolder" parameterType="java.util.HashMap">
+    
+        <selectKey resultType="String" keyProperty="seqNum" order="BEFORE">
+            SELECT NVL(MAX(SEQ_NUM),0)+1 AS SEQ_NUM FROM NFDS_REPORT
+        </selectKey>
+        
+        <![CDATA[
+        INSERT INTO NFDS_REPORT (
+            SEQ_NUM,
+            NAME,
+            REMARK,
+            GROUPCODE,
+            PARENT,
+            TYPE,
+            IS_USED,
+            RGNAME,
+            RGDATE
+        ) VALUES (
+            #{seqNum},
+            #{reportName},
+            #{remark},
+            #{reportTypeCode},
+            #{parent},
+            #{type},
+            #{isUsed},
+            #{registrant},
+            SYSDATE
+        )
+        ]]>
+    </insert>
+    
+    <!-- 모든 보고서폴더 반환 -->
+    <select id="getListOfReportfolders" resultType="java.util.HashMap">
+        SELECT
+            CAST(SEQ_NUM AS CHAR) AS SEQ_NUM,
+            NAME                AS NAME,
+            REMARK              AS REMARK,
+            GROUPCODE           AS GROUP_CODE,
+            PARENT           	AS PARENT,
+            QUERY               AS QUERY,
+            TYPE                AS TYPE,
+            IS_USED             AS IS_USED,
+            RGDATE              AS RG_DATE,
+            RGNAME              AS RG_NAME,
+            MODDATE             AS MOD_DATE,
+            MODNAME             AS MOD_NAME,
+            REFRESHINGTIME      AS REFRESHINGTIME,
+            CHARTLAYOUT         AS CHARTLAYOUT,
+            TABULATE            AS TABULATE,
+            QUERY_SEQ			AS QUERY_SEQ
+        FROM
+            NFDS_REPORT
+        WHERE TYPE = 'reportf'
+        ORDER BY GROUPCODE 
+    </select>
+    
+    <select id="getReportSeqNum" resultType="String">
+		SELECT NVL(MAX(SEQ_NUM),0)+1 AS SEQ_NUM FROM NFDS_REPORT
+   	</select>
+   	
+   	
+   	<select id="getDetailCountForReport" parameterType="string" resultType="String">
+        SELECT COUNT(*) AS CNT 
+        FROM NFDS_QUERY_DT
+        WHERE HEAD_NUM = #{seqOfReport}
+        AND USE_MENU = 'R'
+    </select>
+
+</mapper>

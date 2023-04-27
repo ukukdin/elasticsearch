@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding= "UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+ 
+<mapper namespace="nurier.scraping.setting.dao.UserGroupManagementSqlMapper">
+    
+    <!-- 권한 그룹 list 반환 - scseo -->
+    <select id="getListOfUserGroups" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        <include refid="paging.headerPagingStart"/>
+        SELECT
+            GROUP_CODE    AS GROUP_CODE,
+            GROUP_NAME    AS GROUP_NAME,
+            GROUP_COMMENT AS GROUP_COMMENT,
+            UPDATE_TIME   AS UPDATE_TIME,
+            RGDATE        AS RGDATE,
+            RGNAME        AS RGNAME,
+            MODDATE       AS MODDATE,
+            MODNAME       AS MODNAME
+        FROM
+            NFDS_USER_GROUP
+        WHERE 1=1
+        <if test="groupName != null and groupName != '' ">
+            AND GROUP_NAME = #{groupName}
+        </if>
+        ORDER BY GROUP_CODE
+        <include refid="paging.footerPagingEnd"/>
+    </select>
+    
+    
+    <!-- 한 건의 권한 그룹 반환 (수정처리용) -->
+    <select id="getUserGroup" parameterType="string" resultType="java.util.HashMap">
+        SELECT
+            GROUP_CODE    AS GROUP_CODE,
+            GROUP_NAME    AS GROUP_NAME,
+            GROUP_COMMENT AS GROUP_COMMENT,
+            UPDATE_TIME   AS UPDATE_TIME,
+            RGDATE        AS RGDATE,
+            RGNAME        AS RGNAME,
+            MODDATE       AS MODDATE,
+            MODNAME       AS MODNAME
+        FROM
+            NFDS_USER_GROUP
+        WHERE 
+            GROUP_CODE = #{groupCode}
+    </select>
+    
+    
+    
+    <!-- 권한 그룹 신규등록처리 -->
+    <insert id="registerUserGroup" parameterType="java.util.HashMap">
+        INSERT INTO NFDS_USER_GROUP (
+            GROUP_CODE,
+            GROUP_NAME,
+            GROUP_COMMENT,
+            RGDATE,
+            RGNAME
+        ) VALUES (
+            #{groupCode},
+            #{groupName},
+            #{groupComment},
+            SYSDATE,
+            #{rgName}
+        )
+    </insert>
+    
+    
+    <!-- 권한 그룹 수정처리 -->
+    <update id="editUserGroup" parameterType="java.util.HashMap">
+        <![CDATA[
+        UPDATE
+            NFDS_USER_GROUP
+        SET
+            GROUP_NAME           = #{groupName},
+            GROUP_COMMENT        = #{groupComment},
+            UPDATE_TIME          = SYSDATE,
+            MODDATE              = SYSDATE,
+            MODNAME              = #{modName}
+        WHERE
+            GROUP_CODE           = #{groupCode}
+        ]]>
+    </update>
+    
+    
+    <!-- 권한 그룹 삭제처리 -->
+    <delete id="deleteUserGroup" parameterType="string">
+        DELETE FROM
+            NFDS_USER_GROUP
+        WHERE 
+            GROUP_CODE = #{groupCode}
+    </delete>
+    
+    
+    <!-- 권한 그룹 삭제 전에 연결된 사용자 체크 -->
+    <select id="getUserGroupDeleteCheck" parameterType="string" resultType="int" >
+        SELECT
+            COUNT(*)
+        FROM
+            NFDS_USER
+        WHERE
+            GROUP_CODE = #{groupCode}
+    </select>
+    
+    
+    <!-- 권한그룹 메뉴 등록  -->
+    <insert id="setMenuAuthInsert" parameterType="java.util.HashMap" >
+        INSERT INTO NPAS_USER_MENU_AUTH (
+              GROUP_CODE 
+            , MNUCOD
+        ) VALUES ( 
+              #{groupCode}
+            , #{menuCode}
+        )
+    </insert>
+    
+    
+    <!-- 권한그룹 메뉴 삭제  -->
+    <delete id="setMenuAuthDelete" parameterType="String">
+        DELETE
+            NPAS_USER_MENU_AUTH
+        WHERE
+            GROUP_CODE = #{groupCode}
+    </delete>
+    
+    
+    <!-- 메뉴 권한선택 목록  --> 
+    <select id="getMenuSelectList" parameterType="String" resultType="java.util.HashMap"> 
+        SELECT 
+              A.SEQ_NUM         AS seq_num
+            , A.MNUCOD          AS mnucod
+            , A.MNUNAM          AS mnunam
+            , A.MNUGBN          AS mnugbn
+            , A.EXECNM          AS execnm
+            , A.ICONPT          AS iconpt
+            , A.PARENT          AS parent
+            , A.ORDRNO          AS ordrno
+            , A.REMARK          AS remark
+            , A.IS_USED         AS is_used
+            , B.GROUP_CODE      AS group_code
+        FROM NPAS_MENU A LEFT OUTER JOIN NPAS_USER_MENU_AUTH B 
+          ON A.MNUCOD = B.MNUCOD AND B.GROUP_CODE = #{groupCode}
+        WHERE IS_USED = 'Y'
+        ORDER BY A.MNUCOD 
+    </select>
+    
+    
+    <!-- 다음 그룹 코드 반환 -->
+    <select id="getNextGroupCode" resultType="string">
+        SELECT
+            NVL(MAX(TO_NUMBER(GROUP_CODE)),00000001)+1 as groupCode
+        FROM
+            NFDS_USER_GROUP
+    </select>
+    
+    
+    <select id="getDuplicationUserGroupName" parameterType="String" resultType="int">
+        SELECT
+            COUNT(*)
+        FROM
+            NFDS_USER_GROUP
+        WHERE
+            GROUP_NAME = #{groupName}
+    </select>
+    
+</mapper>

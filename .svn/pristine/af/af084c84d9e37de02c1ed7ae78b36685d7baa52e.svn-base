@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                           http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://www.springframework.org/schema/jee 
+                           http://www.springframework.org/schema/jee/spring-jee.xsd
+                           http://www.springframework.org/schema/context
+                           http://www.springframework.org/schema/context/spring-context.xsd">
+
+
+
+    <bean id="propertyPlaceholderConfigurer" class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="location">
+            <value>classpath:/properties/global.properties</value>
+        </property>
+    </bean>
+    
+
+    <!-- Service, Repository Scan -->
+    <context:component-scan base-package="nurier.scraping">
+        <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller" />
+    </context:component-scan>
+    
+    
+    <!-- 
+    <bean id="messageSource" class="org.springframework.context.support.ResourceBundleMessageSource">
+        <property name="basename">
+            <value>/properties/context</value>
+        </property>
+    </bean> 
+    
+    <bean id="messageSourceAccessor" class="org.springframework.context.support.MessageSourceAccessor">
+        <constructor-arg ref="messageSource" />
+    </bean>
+
+    <bean id="message" class="com.nurier.web.common.constant.MessageProperty">
+        <property name="messageSourceAccessor" ref="messageSourceAccessor" />
+    </bean>
+     -->
+      <bean id="elasticSearchService" class="nurier.scraping.elasticsearch.ElasticsearchService"></bean>
+      <bean id ="callCenterService" class ="nurier.scraping.callcenter.service.CallCenterService"></bean>
+      <bean id="serverInformation" class="nurier.scraping.common.support.ServerInformation">
+        <!-- [WAS IP Address] -->
+        <property name="wasIpAddressOfDevelopmentServer"                  value="${was.development.server.ip}" />
+        
+        <!--  Elasticsearch info -->
+        <property name="searchEngineOperationServerIP"                    value="${searchEngine.operation.server.ip}" />
+        <property name="searchEngineOperationServerPort"                  value="${searchEngine.operation.server.port}" />
+       
+        <property name="searchEngineDevelopmentServerIP"                  value="${searchEngine.development.server.ip}" />
+        <property name="searchEngineDevelopmentServerPort"                value="${searchEngine.development.server.port}" />
+        
+        <property name="searchEngineOperationServerList"                  value="${searchEngine.operation.server.list}" />
+        <property name="searchEngineDevelopmentServerList"                value="${searchEngine.development.server.list}" />
+        
+        <!-- [DetectionEngine::DevelopmentServer] -->
+        <property name="detectionEngine01DevelopmentServer"            value="${detectionEngine.01.development.server}"           />
+        
+        
+        <property name="kafkaOperationBootstrapServerList"                value="${kafka.operation.bootstrap.server.list}" />
+        <property name="kafkaDevelopmentBootstrapServerList"              value="${kafka.development.bootstrap.server.list}" />
+        
+        <!-- REDIS -->
+        <property name="redisOperationServerList"                         value="${redis.operation.server.list}" />
+        <property name="redisDevelopmentServerList"                       value="${redis.development.server.list}" />
+        
+
+        
+        
+    </bean>
+    
+    
+</beans>

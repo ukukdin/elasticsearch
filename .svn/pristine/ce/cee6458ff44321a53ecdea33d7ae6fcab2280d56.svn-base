@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding= "UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+ 
+<mapper namespace="com.nurier.web.nfds.setting.dao.ScorePolicyManageSqlMapper">
+    <select id="getScorePolicyList" resultType="java.util.HashMap">
+        SELECT SEQ_NUM,
+               FROM_SCORE, 
+               TO_SCORE, 
+               CASE WHEN GRADE = 1 THEN '정상'
+                    WHEN GRADE = 2 THEN '관심'
+                    WHEN GRADE = 3 THEN '주의'
+                    WHEN GRADE = 4 THEN '경계'
+                    WHEN GRADE = 5 THEN '심각' 
+               END GRADENAME,
+               GRADE,
+               CASE WHEN ADVICE = 0 THEN '통과(정상)'
+                    WHEN ADVICE = 1 THEN '통과(관심)'
+                    WHEN ADVICE = 2 THEN '모니터링'
+                    WHEN ADVICE = 3 THEN '추가인증'
+                    WHEN ADVICE = 4 THEN '차단'
+               END ADVICENAME,
+               ADVICE
+        FROM NFDS_SCORE_POLICY
+        ORDER BY ORDER_SEQ
+    </select>
+
+    <update id="updateScorePolicy" parameterType="java.util.HashMap">
+        UPDATE NFDS_SCORE_POLICY SET
+				 ADVICE	= #{advice},
+				 GRADE	= #{grade},
+				 FROM_SCORE = #{from_score},
+				 TO_SCORE = #{to_score}
+	  	WHERE SEQ_NUM = #{seq_num}
+    </update>
+    
+</mapper>

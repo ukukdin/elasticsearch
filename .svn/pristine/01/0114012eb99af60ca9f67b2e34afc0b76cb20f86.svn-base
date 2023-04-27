@@ -1,0 +1,218 @@
+package nurier.scraping.setting.controller;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.ibatis.session.SqlSession;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.servlet.ModelAndView;
+
+import nurier.scraping.common.util.AuthenticationUtil;
+import nurier.scraping.common.util.CommonUtil;
+import nurier.scraping.common.util.PagingAction;
+import nurier.scraping.setting.dao.UserGroupManagementSqlMapper;
+
+@Controller
+public class UserGroupController {
+
+	@Autowired
+    private SqlSession sqlSession;
+
+    private static final String RESPONSE_FOR_REGISTRATION_SUCCESS        = "REGISTRATION_SUCCESS";
+    private static final String RESPONSE_FOR_REGISTRATION_FAILED         = "REGISTRATION_FAILED";
+    private static final String RESPONSE_FOR_EDIT_SUCCESS                = "EDIT_SUCCESS";
+    private static final String RESPONSE_FOR_DELETION_SUCCESS            = "DELETION_SUCCESS";
+    private static final String RESPONSE_FOR_DELETION_FAILED             = "DELETION_FAILED";
+    
+    @RequestMapping("/scraping/setting/user/userGroupManagement")
+    public ModelAndView userGroupManagement() {
+        ModelAndView mav = new ModelAndView();
+        mav.setViewName("scraping/setting/user/userGroupManagement.tiles");
+        return mav;
+    }
+    
+    @RequestMapping("/scraping/setting/user/userGroupList")
+    public ModelAndView userGroupList(@RequestParam Map<String,String> reqParamMap) throws Exception {
+        
+        String pageNumberRequested          = StringUtils.defaultIfBlank(reqParamMap.get("pageNumberRequested"),  "1");
+        String numberOfRowsPerPage          = StringUtils.defaultIfBlank(reqParamMap.get("numberOfRowsPerPage"), "10");
+        
+        String groupNameForSearching = StringUtils.trimToEmpty(reqParamMap.get("groupNameForSearching"));  // 검색조건용
+        
+        
+        HashMap<String,String> param = new HashMap<String,String>();
+        param.put("currentPage",    pageNumberRequested);       // pagination 용
+        param.put("recordSize",     numberOfRowsPerPage);       // pagination 용
+        param.put("groupName",      groupNameForSearching);     // 검색용
+        
+        UserGroupManagementSqlMapper  sqlMapper = sqlSession.getMapper(UserGroupManagementSqlMapper.class);
+        //////////////////////////////////////////////////////////////////////////////////////////
+        ArrayList<HashMap<String,Object>> listOfUserGroups = sqlMapper.getListOfUserGroups(param);
+        //////////////////////////////////////////////////////////////////////////////////////////
+        
+        String totalNumberOfRecords = CommonUtil.getTotalNumberOfRecordsInTable(listOfUserGroups);
+
+        PagingAction pagination     = new PagingAction("/scraping/setting/user/listOfUserGroups", Integer.parseInt(pageNumberRequested), Integer.parseInt(totalNumberOfRecords), Integer.parseInt(numberOfRowsPerPage), 5, "", "", "pagination");
+
+        ModelAndView mav = new ModelAndView();
+        mav.setViewName("/scraping/setting/user/listOfUserGroups");
+        mav.addObject("paginationHTML",   pagination.getPagingHtml().toString());
+        mav.addObject("listOfUserGroups", listOfUserGroups);
+        
+        
+        return mav; 
+    }
+    
+    /**
+     * 권한 그룹 신규등록, 수정을 위한 form modal 창 출력 (2015.07.08 - yhshin)
+     * @param reqParamMap
+     * @return
+     */
+    @RequestMapping("/scraping/setting/user/userGroupDetail")
+    public ModelAndView userGroupDetail(@RequestParam Map<String,String> reqParamMap) {
+        ModelAndView mav = new ModelAndView();
+
+        mav.setViewName("scraping/setting/user/userGroupDetail");
+
+        UserGroupManagementSqlMapper  sqlMapper       = sqlSession.getMapper(UserGroupManagementSqlMapper.class);
+        
+        String groupCode = StringUtils.trimToEmpty(reqParamMap.get("groupCode"));  // 검색조건용
+        
+        if(isModalOpenedForEditingBUserGroup(reqParamMap)) {  // 권한 그룹 수정을 위한 MODAL 창
+            HashMap<String,String> userGroupStored = sqlMapper.getUserGroup(groupCode);
+            
+            mav.addObject("UserGroupStored", userGroupStored);
+        }
+        
+        ArrayList<HashMap<String,String>> listOfMenu = sqlMapper.getMenuSelectList(groupCode);
+        mav.addObject("listOfMenu", listOfMenu);
+        
+        return mav;
+    }
+
+    /**
+     * 사용자 수정을 위해 modal 을 열었는지를 검사처리 (yhshin)
+     * @param reqParamMap
+     * @return
+     */
+    private static boolean isModalOpenedForEditingBUserGroup(Map<String,String> reqParamMap) {
+        String mode      = StringUtils.trimToEmpty((String)reqParamMap.get("mode"));
+        String groupCode = StringUtils.trimToEmpty((String)reqParamMap.get("groupCode"));
+        if(StringUtils.equals("MODE_EDIT",mode) && StringUtils.isNotBlank(groupCode)) {
+            return true;
+        }
+        return false;
+    }
+    
+
+    /**
+     * 권한 그룹 등록요청처리 (2015.07.09 - yhshin)
+     * @param reqParamMap
+     * @return
+     * @throws Exception
+     */
+    @RequestMapping("/scraping/setting/user/register_user_group")
+    public @ResponseBody String registerUserGroup(@RequestParam HashMap<String,String> reqParamMap, @RequestParam(value="selectMenu", required=false)String[] selectMenu) throws Exception {
+
+        UserGroupManagementSqlMapper  sqlMapper       = sqlSession.getMapper(UserGroupManagementSqlMapper.class);
+        
+        String groupName    = StringUtils.trimToEmpty(reqParamMap.get("groupName"));
+        String groupComment = StringUtils.trimToEmpty(reqParamMap.get("groupComment"));
+        String groupCode    = sqlMapper.getNextGroupCode();
+        
+        HashMap<String,String> param = new HashMap<String,String>();
+        param.put("groupCode",    groupCode);
+        param.put("groupName",    groupName);
+        param.put("groupComment", groupComment);
+        param.put("rgName",       AuthenticationUtil.getUserId());
+        
+        System.out.println("=================="+sqlMapper.getDuplicationUserGroupName(groupName));
+        if(sqlMapper.getDuplicationUserGroupName(groupName) > 0){
+            return RESPONSE_FOR_REGISTRATION_FAILED;
+        }
+        sqlMapper.registerUserGroup(param);
+        for( String mnucod : selectMenu ) {
+            param.put("menuCode", mnucod);
+            sqlMapper.setMenuAuthInsert(param);
+        }
+        
+        return RESPONSE_FOR_REGISTRATION_SUCCESS;
+    }
+    
+    
+    /**
+    * 권한 그룹 수정 처리 (2015.07.10 - yhshin)
+    * @param reqParamMap
+    * @return
+    * @throws Exception
+    */
+   @RequestMapping("/scraping/setting/user/editUserGroup")
+   public @ResponseBody String editUserGroup(@RequestParam HashMap<String,String> reqParamMap, @RequestParam(value="selectMenu", required=false)String[] selectMenu) throws Exception {
+       
+       UserGroupManagementSqlMapper  sqlMapper       = sqlSession.getMapper(UserGroupManagementSqlMapper.class);
+       
+       String groupName    = StringUtils.trimToEmpty(reqParamMap.get("groupName"));
+       String groupComment = StringUtils.trimToEmpty(reqParamMap.get("groupComment"));
+       String groupCode    = StringUtils.trimToEmpty(reqParamMap.get("groupCode"));
+       
+       HashMap<String,String> param = new HashMap<String,String>();
+       param.put("groupCode",    groupCode);
+       param.put("groupName",    groupName);
+       param.put("groupComment", groupComment);
+       param.put("modName",      AuthenticationUtil.getUserId());
+       
+       sqlMapper.editUserGroup(param);
+       sqlMapper.setMenuAuthDelete(groupCode);
+       
+       for( String mnucod : selectMenu ) {
+           param.put("menuCode", mnucod);
+           sqlMapper.setMenuAuthInsert(param);
+       }
+       StringBuffer traceContent = new StringBuffer(100);
+       traceContent.append("그룹코드 : ").append(groupCode   ).append(", ");
+       traceContent.append("그룹명 : "  ).append(groupName   ).append(", ");
+       traceContent.append("그룹설명 : ").append(groupComment).append(", ");
+       
+       return RESPONSE_FOR_EDIT_SUCCESS;
+   }
+   
+   
+   /**
+    * 권한 그룹 삭제 처리 (2015.07.10 - yhshin)
+    * @param reqParamMap
+    * @return
+    * @throws Exception
+    */
+   @RequestMapping("/scraping/setting/user/delete_user_group")
+   public @ResponseBody String deleteUserGroup(@RequestParam Map<String,String> reqParamMap) throws Exception {
+       UserGroupManagementSqlMapper sqlMapper = sqlSession.getMapper(UserGroupManagementSqlMapper.class);
+
+       String groupName    = StringUtils.trimToEmpty(reqParamMap.get("groupName"));
+       String groupComment = StringUtils.trimToEmpty(reqParamMap.get("groupComment"));
+       String groupCode    = StringUtils.trimToEmpty(reqParamMap.get("groupCode"));
+       
+       int cnt = sqlMapper.getUserGroupDeleteCheck(groupCode);
+       
+       if(cnt > 0){
+           return RESPONSE_FOR_DELETION_FAILED;
+       }
+       
+       sqlMapper.deleteUserGroup(groupCode);
+       sqlMapper.setMenuAuthDelete(groupCode);
+       
+       StringBuffer traceContent = new StringBuffer(100);
+       traceContent.append("그룹코드 : ").append(groupCode   ).append(", ");
+       traceContent.append("그룹명 : "  ).append(groupName   ).append(", ");
+       traceContent.append("그룹설명 : ").append(groupComment).append(", ");
+       
+       return RESPONSE_FOR_DELETION_SUCCESS;
+   }
+}
+
+

@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding= "UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+ 
+<mapper namespace="nurier.scraping.setting.dao.WhiteListManagementSqlMapper">
+
+    <!-- White User list 반환 -->
+    <select id="getListOfWhiteUsersNpas" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        <include refid="paging.headerPagingStart"/>
+        SELECT
+            TO_CHAR(SEQ_NUM)   AS SEQ_NUM,
+            TYPE               AS TYPE, 
+            VALUE              AS VALUE, 
+            NAME               AS NAME,
+            REMARK             AS REMARK,
+            USEYN              AS USEYN,
+            RGNAME             AS RGNAME,
+            RGDATE             AS RGDATE,
+            CUSTINFO1          AS CUSTINFO1,
+            CUSTINFO2          AS CUSTINFO2
+        FROM
+            NPAS_WHITE_USER
+        WHERE 1=1
+        <if test="VALUE != null and VALUE != '' ">
+            AND VALUE = #{VALUE}
+        </if>
+        <if test="NAME != null and NAME != '' ">
+            AND NAME = #{NAME}
+        </if>
+        <if test="CUSTINFO1 != null and CUSTINFO1 != '' ">
+            AND CUSTINFO1 = #{CUSTINFO1}
+        </if>
+        <if test="RGNAME != null and RGNAME != '' ">
+            AND RGNAME = #{RGNAME}
+        </if>
+        <if test="USEYN != null and USEYN != '' ">
+            AND USEYN = #{USEYN}
+        </if>
+        <if test="START_DATE != null and START_DATE != '' ">
+            <![CDATA[
+            AND TO_NUMBER(#{START_DATE}) <= TO_NUMBER(RGDATE)
+            ]]>
+        </if>
+        <if test="END_DATE != null and END_DATE != '' ">
+            <![CDATA[
+            AND TO_NUMBER(RGDATE) <= TO_NUMBER(#{END_DATE})
+            ]]>
+        </if>
+        ORDER BY
+            RGDATE DESC
+        <include refid="paging.footerPagingEnd"/>
+    </select>
+    
+    <!-- White User 전체 반환 -->
+    <select id="getListOfAllWhiteUsers" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            TO_CHAR(SEQ_NUM)   AS SEQ_NUM,
+            TYPE               AS TYPE, 
+            VALUE              AS VALUE, 
+            NAME               AS NAME,
+            REMARK             AS REMARK,
+            USEYN              AS USEYN,
+            RGNAME             AS RGNAME,
+            RGDATE             AS RGDATE,
+            CUSTINFO1          AS CUSTINFO1,
+            CUSTINFO2          AS CUSTINFO2
+        FROM
+            NPAS_WHITE_USER
+        WHERE
+            USEYN = 'Y'
+    </select>
+    
+    <!-- White User 신규등록처리 -->
+    <insert id="registerWhiteUser" parameterType="java.util.HashMap">
+    
+        <selectKey resultType="String" keyProperty="seq_num" order="BEFORE">
+            SELECT NVL(MAX(SEQ_NUM),0)+1 as seq_num FROM NPAS_WHITE_USER
+        </selectKey>
+        
+        <![CDATA[
+        INSERT INTO NPAS_WHITE_USER (
+            SEQ_NUM,
+            TYPE,
+            VALUE,
+            NAME,
+            REMARK,
+            USEYN,
+            RGNAME,
+            RGDATE,
+            CUSTINFO1,
+            CUSTINFO2
+        ) VALUES (
+            #{seq_num},
+            #{TYPE},
+            #{VALUE},
+            #{NAME},
+            #{REMARK},
+            #{USEYN},
+            #{RGNAME},
+            TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'),
+            #{CUSTINFO1},
+            TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS')
+        )
+        ]]>
+    </insert>
+    
+    
+    <!-- 한 건의 White User 반환 (수정처리용) -->
+    <select id="getWhiteUser" parameterType="string" resultType="java.util.HashMap">
+        SELECT
+            TO_CHAR(SEQ_NUM)   AS SEQ_NUM,
+            TYPE               AS TYPE,
+            VALUE              AS VALUE,
+            NAME               AS NAME,
+            REMARK             AS REMARK,
+            USEYN              AS USEYN,
+            RGNAME             AS RGNAME,
+            RGDATE             AS RGDATE,
+            CUSTINFO1          AS CUSTINFO1,
+            CUSTINFO2          AS CUSTINFO2
+        FROM
+            NPAS_WHITE_USER
+        WHERE 
+            SEQ_NUM = #{seqOfWhiteUser}
+    </select>
+    
+    
+    <!-- '이용자ID' 에 의한 한 건의 WhiteUser 반환 -->
+    <select id="getWhiteUserByUserId" parameterType="string" resultType="java.util.HashMap">
+        SELECT
+            TO_CHAR(SEQ_NUM)   AS SEQ_NUM,
+            TYPE               AS TYPE,
+            VALUE              AS VALUE,
+            NAME               AS NAME,
+            REMARK             AS REMARK,
+            USEYN              AS USEYN,
+            RGNAME             AS RGNAME,
+            RGDATE             AS RGDATE,
+            CUSTINFO1          AS CUSTINFO1,
+            CUSTINFO2          AS CUSTINFO2
+        FROM
+            NPAS_WHITE_USER
+        WHERE 
+            VALUE = #{value}
+    </select>
+    
+    
+    <!-- FDS Rule 수정처리 -->
+    <update id="editWhiteUser" parameterType="java.util.HashMap">
+        <![CDATA[
+        UPDATE
+            NPAS_WHITE_USER
+        SET
+            REMARK            = #{REMARK},
+            USEYN             = #{USEYN},
+            CUSTINFO2         = TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS')
+        WHERE
+            SEQ_NUM           = #{SEQ_NUM}
+        ]]>
+    </update>
+    
+    
+    <!-- White User 삭제처리 -->
+    <delete id="deleteWhiteUser" parameterType="string">
+        DELETE FROM
+            NPAS_WHITE_USER
+        WHERE 
+            SEQ_NUM = #{seqOfWhiteUser}
+    </delete>
+    
+    
+    <select id="getNextSequenceNumber" resultType="string">
+        SELECT
+            NVL(MAX(SEQ_NUM), 0) + 1 AS NEXT_SEQ_NUM
+        FROM
+            NPAS_WHITE_USER
+    </select>
+    
+</mapper>

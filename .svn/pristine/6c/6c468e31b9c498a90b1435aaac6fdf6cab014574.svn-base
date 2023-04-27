@@ -1,0 +1,633 @@
+package nurier.scraping.setting.service;
+
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.GregorianCalendar;
+import java.util.HashMap;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.time.DateUtils;
+import org.apache.ibatis.session.SqlSession;
+import org.elasticsearch.action.search.SearchPhaseExecutionException;
+import org.elasticsearch.action.search.SearchRequest;
+import org.elasticsearch.action.search.SearchRequestBuilder;
+import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.action.search.SearchType;
+import org.elasticsearch.client.Client;
+import org.elasticsearch.client.RequestOptions;
+import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.search.aggregations.bucket.terms.Terms;
+import org.elasticsearch.search.aggregations.bucket.terms.Terms.Bucket;
+import org.elasticsearch.search.builder.SearchSourceBuilder;
+import org.elasticsearch.transport.ReceiveTimeoutTransportException;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import nurier.scraping.common.constant.CommonConstants;
+import nurier.scraping.common.exception.NfdsException;
+import nurier.scraping.common.support.ServerInformation;
+import nurier.scraping.common.util.DateUtil;
+import nurier.scraping.common.vo.QueryVO;
+import nurier.scraping.elasticsearch.ElasticsearchService;
+import nurier.scraping.setting.dao.QueryManagementSqlMappler;
+
+
+/**
+ * QueryService.java Class is Designed for providing 
+ *
+ * Copyright    Copyright (c) 2015
+ * Company     Nurier Co.
+ *
+ * @Author      : 천종은
+ * @File        : com.nurier.web.query.service.QueryService.java
+ * @Version     : 1.0,
+ * @See         : 
+ * @Date        : 2015. 5. 6. - 오전 11:31:55
+ * @Commnad:
+ *
+ **/
+
+@Service
+public class QueryGeneratorService {
+    
+    private static final Logger Logger = LoggerFactory.getLogger(QueryGeneratorService.class);
+    
+    @Autowired
+    private ServerInformation serverInformation;
+
+    @Autowired
+    private SqlSession sqlSession;
+    @Autowired
+    private ElasticsearchService elasticSearchService;
+
+
+    
+    /**
+     * SQLQuery 생성처리 - ELA SQL문 생성 (2015.04.22 - bhkim)
+     * @param sqlTableName
+     * @param boolType
+     * @param fields
+     * @param documentField
+     * @param boolQueryType
+     * @param boolQueryTypeValue
+     * @param lowOperator
+     * @param lowOperatorValue
+     * @param highOperator
+     * @param highOperatorValue
+     * @param forLength
+     * @return StringBuffer
+     * @throws Exception
+     */
+    public StringBuffer setSQLBoolQuery(String sqlTableName, String boolType, ArrayList<String> fields, String documentField, String facet, String boolQueryType, String boolQueryTypeValue, String lowOperator, String lowOperatorValue, String highOperator, String highOperatorValue, int forLength) throws Exception {
+        
+        Logger.debug("[QueryGeneratorService][METHOD : setSQLBoolQuery][EXCEPTION]");
+        Logger.debug("[QueryGeneratorService][METHOD : setSQLBoolQuery][sqlTableName :          {}]", sqlTableName);
+        Logger.debug("[QueryGeneratorService][METHOD : boolType][sqlTableName :                 {}]", boolType);
+        Logger.debug("[QueryGeneratorService][METHOD : setSQLBoolQuery][fields :                {}]", fields);
+        Logger.debug("[QueryGeneratorService][METHOD : setSQLBoolQuery][documentField :         {}]", documentField);
+        Logger.debug("[QueryGeneratorService][METHOD : setSQLBoolQuery][boolQueryType :         {}]", boolQueryType);
+        Logger.debug("[QueryGeneratorService][METHOD : setSQLBoolQuery][boolQueryTypeValue :    {}]", boolQueryTypeValue);
+        Logger.debug("[QueryGeneratorService][METHOD : setSQLBoolQuery][lowOperator :           {}]", lowOperator);
+        Logger.debug("[QueryGeneratorService][METHOD : setSQLBoolQuery][lowOperatorValue :      {}]", lowOperatorValue);
+        Logger.debug("[QueryGeneratorService][METHOD : setSQLBoolQuery][highOperator :          {}]", highOperator);
+        Logger.debug("[QueryGeneratorService][METHOD : setSQLBoolQuery][highOperatorValue :     {}]", highOperatorValue);
+        Logger.debug("[QueryGeneratorService][METHOD : setSQLBoolQuery][forLength :             {}]", forLength);
+        
+        StringBuffer sb = new StringBuffer();
+        
+        String boolTypeValue = "";
+        String queryValue = "";
+        String fieldValue = "";
+        
+         
+        /**
+            * 첫 WHERE 이후에는 AND, OR  선언
+          */
+        if(StringUtils.equals("must", boolType)) {
+            boolTypeValue = " AND ";
+        } else if(StringUtils.equals("must_not", boolType)) {
+            boolTypeValue = " AND ";
+        } else if(StringUtils.equals("should", boolType)) {
+            boolTypeValue = " OR ";
+        }
+        
+        /**
+         * 첫 조건은 WHERE문 선언
+         */
+        if(forLength == 0) {
+            boolTypeValue = "WHERE ";
+        }
+        
+        /**
+         * fields 선언(전체는 *, 아니면 field
+         */        
+        
+        Logger.debug("facet : " + facet);
+        // group by 여부 확인
+        if(!(CommonConstants.BLANKCHECK).equals(facet) && null != facet) {        // group by 라면
+            fieldValue = facet;
+            fieldValue += ", count(*) as cnt ";
+        
+        } else if((CommonConstants.BLANKCHECK).equals(fields) || null == fields) {//    group by가 아니고 field가 없다면 
+            if(StringUtils.equals(documentField, "match_all")) {        // 조건이 전체 일때
+                fieldValue = "*";
+            } else {
+                fieldValue = documentField;                
+            }
+        } else {                                        // group by 가 아니고 field가 있을때
+            int fieldSize = fields.size();
+            int fieldCnt = 0;
+            String comma = "";
+            for(String str : fields) {                                
+                if(fieldCnt == 0 )
+                    comma = "";
+                else
+                    comma = ",";
+                
+                fieldValue += comma + str;
+                fieldCnt ++;
+            }            
+        } 
+        
+        /**
+         * StringBuffer의 첫 구문 SELECT 절 선언
+         */
+        if(forLength == 0) {
+            sb.append("SELECT " + fieldValue + " FROM " + sqlTableName + " ");
+        }
+        
+        
+        /**
+         * WHERE, AND, OR 문 조합.
+         */
+        if(StringUtils.equals(documentField, "match_all")) { 
+            queryValue = "*";
+        } else if(StringUtils.equals(boolQueryType, "term")) {
+            queryValue = " = '" + boolQueryTypeValue + "'";
+            
+            if(StringUtils.equals("must_not", boolType)) {                // MUST_NOT일때 SQL에서 [!=] 구문이 없기 때문에 [NOT IN]으로 변경하기 위해
+                queryValue = "IN ('" + boolQueryTypeValue + "')";
+            }
+        } else if(StringUtils.equals(boolQueryType, "prefix")) { 
+            queryValue = "LIKE '" + boolQueryTypeValue + "%'"; 
+        } else if(StringUtils.equals(boolQueryType, "query_string")) { 
+            queryValue = boolQueryTypeValue; 
+        } else if(StringUtils.equals(boolQueryType, "range") && (!(CommonConstants.BLANKCHECK).equals(lowOperatorValue) || !(CommonConstants.BLANKCHECK).equals(highOperatorValue))) {
+            queryValue = "BETWEEN '" + lowOperatorValue + "' AND '"+ highOperatorValue + "'";
+        }
+        
+        if(StringUtils.equals("must_not", boolType)) {                // MUST_NOT이라면 [같지않다]로 변경
+            queryValue = " NOT " + queryValue;
+        }
+        
+        if(StringUtils.equals("must", boolType) && StringUtils.equals(documentField, "match_all")) {
+            // sb.append("SELECT * FROM " + sqlTableName);
+        } else {
+            sb.append(boolTypeValue + " " + documentField + " " + queryValue + " ");
+        }
+        
+        return sb;
+    }
+    
+    
+    /**
+     * 'FACET' 을 사용했는지 검사처리
+     * @param reqParamMap
+     * @return
+     */
+    public boolean isUseOfFacet(HashMap<String,String> reqParamMap) {
+        String isUseOfFacet = ""; 
+        String facetType = StringUtils.trimToEmpty(reqParamMap.get("facetType"));
+        String fieldSeletorForFacet = StringUtils.trimToEmpty(reqParamMap.get("fieldSeletorForFacet"));
+        
+        if (!(CommonConstants.BLANKCHECK).equals(facetType) && !(CommonConstants.BLANKCHECK).equals(fieldSeletorForFacet)){
+            isUseOfFacet = "NOTNULL";
+        }
+        
+        Logger.debug("[QueryGeneratorService][METHOD : isUseOfFacet][isUseOfFacet : {}]", isUseOfFacet);
+        return (!(CommonConstants.BLANKCHECK).equals(isUseOfFacet));
+    }
+    
+    /**
+     * 'SORT' 를 사용했는지 검사처리
+     * @param reqParamMap
+     * @return
+     */
+    public boolean isUseOfSort(String[] arrayOfSortsSelected) {
+        Logger.debug("[QueryGeneratorService][METHOD : isUseOfSort]");
+        Logger.debug("[QueryGeneratorService][METHOD : isUseOfSort][arrayOfSortsSelected     : {} ]", arrayOfSortsSelected);
+        
+        String isUseOfSort = "";
+        for(int i=0; i<arrayOfSortsSelected.length; i++) {
+            if (!(CommonConstants.BLANKCHECK).equals(arrayOfSortsSelected[i])){
+                isUseOfSort = arrayOfSortsSelected[i];
+            }
+        }
+        Logger.debug("[QueryGeneratorService][METHOD : isUseOfSort][isUseOfSort : {}]", isUseOfSort);
+        return (!(CommonConstants.BLANKCHECK).equals(isUseOfSort));
+    }
+    /**
+     * QUERY 생성기통해 생성된 Query실행결과를 String 으로 반환 (2014.07.01 - jblee)
+     * @param queryOfSearchRequest
+     * @return
+     * @throws Exception
+     */
+    public String getSearchResponseConvertedToString(String queryOfSearchRequest) throws Exception {
+        return getSearchResponse(queryOfSearchRequest).toString();
+    }
+    /**
+     * Query 실행결과인 SearchResponse 를 반환 (2014.07.01 - jblee)
+     * @param queryOfSearchRequest
+     * @return
+     * @throws Exception
+     */
+    public SearchResponse getSearchResponse(String queryOfSearchRequest)  throws Exception {
+
+        
+        RestHighLevelClient clientOfSearchEngine = elasticSearchService.getClientOfSearchEngine();
+        SearchRequest searchRequest = new SearchRequest().searchType(SearchType.QUERY_THEN_FETCH);
+        
+        SearchSourceBuilder sourcebuilder = new SearchSourceBuilder().query(QueryBuilders.wrapperQuery(queryOfSearchRequest));
+       
+        searchRequest.source(sourcebuilder);
+        
+        SearchResponse searchResponse = null;
+        try {
+            searchResponse = clientOfSearchEngine.search(searchRequest, RequestOptions.DEFAULT);
+            
+        } catch(ReceiveTimeoutTransportException receiveTimeoutTransportException) {
+            throw new NfdsException(receiveTimeoutTransportException, "SEARCH_ENGINE_ERROR.0002");
+        } catch(SearchPhaseExecutionException searchPhaseExecutionException) {
+            throw new NfdsException(searchPhaseExecutionException, "SEARCH_ENGINE_ERROR.0003");
+        } catch(Exception exception) {
+            throw exception;
+        } finally {
+            clientOfSearchEngine.close();
+        }
+        
+        return searchResponse;
+    }
+    /**
+     * 'SIZE' 를 사용했는지 검사처리
+     * @param reqParamMap
+     * @return
+     */
+    public boolean isUseOfSize(HashMap<String,String> reqParamMap) {
+        String isUseOfSize = StringUtils.trimToEmpty(reqParamMap.get("size"));
+        
+        Logger.debug("[QueryGeneratorService][METHOD : isUseOfSize][isUseOfSize : {}]", isUseOfSize);
+        return (!(CommonConstants.BLANKCHECK).equals(isUseOfSize));
+    }
+    
+    /**
+     * '미리설정 : 날짜범위' 를 사용했는지 검사처리
+     * @param reqParamMap
+     * @return
+     */
+    public boolean isUseOfBeforehand(HashMap<String,String> reqParamMap) {
+        String isUseOfField = StringUtils.trimToEmpty(reqParamMap.get("checkboxForBeforehandQuery"));
+        Logger.debug("[QueryGeneratorService][METHOD : isUseOfBeforehand][isUseOfBeforehand : {}]", isUseOfField);
+        return (!(CommonConstants.BLANKCHECK).equals(isUseOfField));
+    }
+    
+    /**
+     * 'FIELD' 를 사용했는지 검사처리
+     * @param reqParamMap
+     * @return
+     */
+    public boolean isUseOfField(String[] arrayOfFieldsSelected) {
+        Logger.debug("[QueryGeneratorService][METHOD : isUseOfField]");        
+        Logger.debug("[QueryGeneratorService][METHOD : isUseOfField][arrayOfFieldsSelected : {} ]", arrayOfFieldsSelected);
+        String isUseOfField = "";
+        for(int i=0; i<arrayOfFieldsSelected.length; i++) {
+            if (!(CommonConstants.BLANKCHECK).equals(arrayOfFieldsSelected[i])){
+                isUseOfField = arrayOfFieldsSelected[i];
+            }
+        }
+        Logger.debug("[QueryGeneratorService][METHOD : isUseOfField][isUseOfField : {}]", isUseOfField);
+        return (!(CommonConstants.BLANKCHECK).equals(isUseOfField));
+        
+    }
+    /**
+     * Query 실행결과인 SearchResponse 를 반환 INDEX 적용 버전(2015.08.31 - bhkim)
+     * @param queryOfSearchRequest, startDateFormatted, endDateFormatted
+     * @return
+     * @throws Exception
+     */
+    public SearchResponse getSearchResponseIndex(String queryOfSearchRequest)  throws Exception {
+
+        RestHighLevelClient clientOfSearchEngine = elasticSearchService.getClientOfSearchEngine();
+        
+        SearchResponse searchResponse = null;
+        String startDateFormatted = "";
+        String endDateFormatted = "";
+        try {
+            
+            // 범위 지정 검색일 경우 index 처리 위해 범위 구분을 찾아 getIndexDateQuery() 호출
+            if ( queryOfSearchRequest.indexOf("now+9h") != -1 ) {
+                String indexGbn = "";
+                if ( queryOfSearchRequest.indexOf("now+9h/d") != -1 ) {
+                    indexGbn = "today";             // 오늘
+                } else if ( queryOfSearchRequest.indexOf("now+9h/w") != -1 ) {
+                    indexGbn = "week";              // 주간
+                } else if ( queryOfSearchRequest.indexOf("now+9h/M") != -1 ) {
+                    indexGbn = "month";             // 월간
+                } else if ( queryOfSearchRequest.indexOf("now+9h-1d/d") != -1 ) {
+                    indexGbn = "yesterday";         // 어제
+                } else if ( queryOfSearchRequest.indexOf("now+9h-1w/w") != -1 ) {
+                    indexGbn = "lastweek";          // 이전주
+                } else if ( queryOfSearchRequest.indexOf("now+9h-1M/M") != -1 ) {
+                    indexGbn = "lastmonth";         // 이전월
+                }
+                
+                startDateFormatted = getIndexDateQuery(indexGbn, "start");       // 날짜범위별 적용날짜 구하기 시작날짜
+                endDateFormatted = getIndexDateQuery(indexGbn, "end");           // 날짜범위별 적용날짜 구하기 종료날짜
+                
+            } else {    // 지정날짜 검색일 경우 Query에서 날짜를 찾아 Index 지정.
+                
+                JSONObject searchElaQuery = new JSONObject(queryOfSearchRequest);
+                JSONObject queryBoolObj = searchElaQuery.getJSONObject("query").getJSONObject("bool");
+                
+                JSONObject option = new JSONObject();
+                
+                try {
+                    option = queryBoolObj.getJSONObject("must").getJSONObject("range").getJSONObject(CommonConstants.FDS_SERVICE_CONTROL_FIELD_NAME_FOR_LOG_DATE_TIME);
+                } catch(JSONException e) {
+                    option = queryBoolObj.getJSONArray("must").getJSONObject(0).getJSONObject("range").getJSONObject(CommonConstants.FDS_SERVICE_CONTROL_FIELD_NAME_FOR_LOG_DATE_TIME);
+                } catch(Exception exception) {
+                    throw exception;
+                }
+                
+                startDateFormatted = option.getString("from").substring(0, 10);
+                endDateFormatted = option.getString("to").substring(0, 10);
+            }
+            
+            //searchType(searchType.query_then_Fetch) could be prefrence("_only_nodes:<node_id>");
+            SearchRequest searchRequest = new SearchRequest().preference("_only_nodes:<node_id>");
+            searchRequest.indices(elasticSearchService.getIndicesForFdsMainIndex(startDateFormatted, endDateFormatted)).indicesOptions(elasticSearchService.getIndicesOptionsForFdsDailyIndex());
+            SearchSourceBuilder sourcebuilder = new SearchSourceBuilder();
+            sourcebuilder.query(QueryBuilders.wrapperQuery(queryOfSearchRequest));
+            searchRequest.source(sourcebuilder);
+            searchResponse = clientOfSearchEngine.search(searchRequest, RequestOptions.DEFAULT);
+            
+        } catch(ReceiveTimeoutTransportException receiveTimeoutTransportException) {
+            throw new NfdsException(receiveTimeoutTransportException, "SEARCH_ENGINE_ERROR.0002");
+        } catch(SearchPhaseExecutionException searchPhaseExecutionException) {
+            throw new NfdsException(searchPhaseExecutionException, "SEARCH_ENGINE_ERROR.0003");
+        } catch(Exception exception) {
+            throw exception;
+        } finally {
+            clientOfSearchEngine.close();
+        }
+        
+        return searchResponse;
+    }
+    
+    
+    /**
+     * GROUP BY에 해당하는 필드 매핑을 위해 데이터 조회
+     * @param queryVO
+     * @return
+     */
+    public ArrayList<QueryVO> getQueryDetailValue2(QueryVO queryVO){
+        QueryManagementSqlMappler sqlMapper = sqlSession.getMapper(QueryManagementSqlMappler.class);
+        ArrayList<QueryVO>  queryList = sqlMapper.getQueryDetailValue2(queryVO);
+        return queryList;        
+    }
+    
+    
+    
+    /**
+     * 'FIELD' 를 사용했는지 검사처리 (Btn용)
+     * @param reqParamMap
+     * @return
+     */
+    public boolean isUseOfFieldBtn(HashMap<String,String> reqParamMap) {
+        String isUseOfField = "N";
+        if(reqParamMap != null) {
+            isUseOfField = StringUtils.trimToEmpty(reqParamMap.get("isUseOfField"));
+        }
+        return (StringUtils.equals("Y", isUseOfField));
+    }
+    
+    /**
+     * 'FACET' 을 사용했는지 검사처리 (Btn용)
+     * @param reqParamMap
+     * @return
+     */
+    public boolean isUseOfFacetBtn(HashMap<String,String> reqParamMap) {
+        String isUseOfFacet = "N";
+        if(reqParamMap != null) {
+            isUseOfFacet = StringUtils.trimToEmpty(reqParamMap.get("isUseOfFacet"));
+        }
+        return (StringUtils.equals("Y", isUseOfFacet));
+    }
+    
+    /**
+     * 'SORT' 를 사용했는지 검사처리 (Btn용)
+     * @param reqParamMap
+     * @return
+     */
+    public boolean isUseOfSortBtn(HashMap<String,String> reqParamMap) {
+        String isUseOfSort = "N";
+        if(reqParamMap != null) {
+            isUseOfSort = StringUtils.trimToEmpty(reqParamMap.get("isUseOfSort"));
+        }
+        return (StringUtils.equals("Y", isUseOfSort));
+    }
+    
+    /**
+     * 'SIZE' 를 사용했는지 검사처리 (Btn용)
+     * @param reqParamMap
+     * @return
+     */
+    public boolean isUseOfSizeBtn(HashMap<String,String> reqParamMap) {
+        String isUseOfSize = "N";
+        if(reqParamMap != null) {
+            isUseOfSize = StringUtils.trimToEmpty(reqParamMap.get("isUseOfSize"));
+        }
+        return (StringUtils.equals("Y", isUseOfSize));
+    }
+    
+    
+    
+    
+    /**
+     * Query 가 facet 조회용 query 인지 판단처리 (2014.10.07 - scseo)
+     * @param queryOfSearchRequest
+     * @return
+     */
+    public boolean isQueryForFacet(String queryOfSearchRequest) {
+      //return StringUtils.containsIgnoreCase(queryOfSearchRequest, CommonConstants.KEYWORD_IN_SEARCHQUERY_FOR_FACET); // 탐지가 안되는 경우가 있어서 사용않함
+        return (StringUtils.containsIgnoreCase(queryOfSearchRequest, CommonConstants.TERMS_FACET_NAME_FOR_REPORT) || StringUtils.containsIgnoreCase(queryOfSearchRequest, CommonConstants.KEYWORD_IN_SEARCHQUERY_FOR_FACET));
+    }
+    
+    
+    /**
+     * Query 가 field 지정 조회 query 인지 판단처리 (2014.10.07 - scseo)
+     * @param queryOfSearchRequest
+     * @return
+     */
+    public boolean isQueryForFieldChosen(String queryOfSearchRequest) {
+        return StringUtils.containsIgnoreCase(queryOfSearchRequest, CommonConstants.KEYWORD_IN_SEARCHQUERY_FOR_FIELD);
+    }
+    
+    
+    
+    /**
+     * Query의 aggregations field name 가져오기 최대 2개 (2015.07.20 - bhkim)
+     * @param searchResponse
+     * @return
+     */
+    public ArrayList<String> getSearchFieldNames(SearchResponse searchResponse) throws Exception {
+        Logger.debug("[QueryGeneratorService][METHOD : getSearchFieldNames][EXECUTION]");
+        ArrayList<String> fieldNameList = new ArrayList<String>();
+        
+        // Ela Query 에서 Field Name 가져오기
+        try {
+            
+            if(isQueryForAggregationUsed(searchResponse)) {
+                String firstGroupByName = searchResponse.getAggregations().iterator().next().getName(); // group by first field name
+                fieldNameList.add(firstGroupByName);
+                Terms aggregations = searchResponse.getAggregations().get(firstGroupByName);
+                
+                Logger.debug("[QueryGeneratorService][METHOD : getSearchFieldNames][getBuckets isEmpty] : " + aggregations.getBuckets().isEmpty());
+                
+                if(aggregations.getBuckets().isEmpty() == false) {
+                    Bucket firstEntry  =  aggregations.getBuckets().iterator().next();
+                    
+                    if(firstEntry.getAggregations().iterator().hasNext()) {
+                        fieldNameList.add(firstEntry.getAggregations().iterator().next().getName()); // group by second field name
+                    }
+                }
+            }
+            Logger.debug("[QueryGeneratorService][METHOD : getSearchFieldNames][fieldNameList] : " + fieldNameList.toString());
+        } catch(NullPointerException nullPointerException) {
+            throw new NfdsException(nullPointerException, "SEARCH_ENGINE_ERROR.0102");
+        } catch(Exception exception) {
+            throw new NfdsException(exception, "SEARCH_ENGINE_ERROR.0101");
+        }
+        
+        return fieldNameList;
+    }
+    
+    /**
+     * Query 에 Aggregation이 있는지 확인 (2014.10.07 - scseo)
+     * @param searchResponse
+     * @return
+     */
+    public boolean isQueryForAggregationUsed(SearchResponse searchResponse) {
+        
+        boolean isAggregations = false;
+        if(searchResponse.getAggregations() != null) {
+            isAggregations = true;
+        }
+        
+        return isAggregations;
+    }
+    
+    
+    
+    
+    /**
+     * query 로 검색하기 위한 날짜 Index를 구하기 위한 Date 반환(2015.08.31 - bhkim)
+     * @param dateGbn       - Date 구분 (today, week, month 등)
+     * @param returnGbn     - return 구분 (start : 시작날짜. end : 종료날짜)
+     * @return String
+     */
+    public String getIndexDateQuery(String dateRange, String returnGbn) throws Exception {
+        
+        SimpleDateFormat simpleDateFormat  = new SimpleDateFormat("yyyy-MM-dd");
+        GregorianCalendar calendar = new GregorianCalendar();
+        
+        String startDateFormatted = "";
+        String endDateFormatted = "";
+        String returnDate = "";
+        
+        try {
+            if (StringUtils.equals("today", dateRange)) {            //오늘
+                startDateFormatted = DateUtil.getCurrentDateSeparatedByDash();
+                endDateFormatted = DateUtil.getCurrentDateSeparatedByDash();
+            } else if (StringUtils.equals("week", dateRange)) {       //주간(월~일)
+                
+                Calendar sDay = Calendar.getInstance();
+                
+                sDay.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
+                String firstDay = simpleDateFormat.format(sDay.getTime());
+                
+                Calendar eDay = Calendar.getInstance();
+                eDay.set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY);
+                eDay.add(Calendar.DAY_OF_WEEK, Calendar.DAY_OF_WEEK);
+                String endday = simpleDateFormat.format(eDay.getTime());
+                
+                startDateFormatted   = firstDay;
+                endDateFormatted     = endday;
+            } else if (StringUtils.equals("month", dateRange)) {      //월간
+                String startDate = DateUtil.getCurrentDateSeparatedByDash().substring(0, 8);
+                String firstDay = startDate + "01";
+                String endday = startDate + calendar.getActualMaximum(calendar.DAY_OF_MONTH);
+                
+                startDateFormatted = firstDay;
+                endDateFormatted = endday;
+            } else if (StringUtils.equals("yesterday", dateRange)) {  //어제
+                
+                Date dateObjectOfCurrentDate = simpleDateFormat.parse(simpleDateFormat.format(System.currentTimeMillis()));
+                Date yesterday = DateUtils.addDays(dateObjectOfCurrentDate, -1);
+                
+                String firstDay = simpleDateFormat.format(yesterday.getTime());
+                
+                startDateFormatted   = firstDay;
+                endDateFormatted     = firstDay;
+            } else if (StringUtils.equals("lastweek", dateRange)) {   //이전주
+                // 지난주 월요일 구하기
+                Calendar sDay = Calendar.getInstance();
+                sDay.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
+                sDay.add(Calendar.DAY_OF_WEEK, -Calendar.DAY_OF_WEEK);
+                String firstDay = simpleDateFormat.format(sDay.getTime());
+                
+                // 지난 일요일 구하기
+                Calendar eDay = Calendar.getInstance();
+                eDay.set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY);
+                String endday = simpleDateFormat.format(eDay.getTime());
+                
+                startDateFormatted   = firstDay;
+                endDateFormatted     = endday;
+            } else if (StringUtils.equals("lastmonth", dateRange)) {  //이전월
+                String startDate = DateUtil.getThePastDateOfFewMonthsAgo(1).substring(0, 8);
+                String firstDay = startDate + "01";
+                
+                Calendar eDay = Calendar.getInstance();
+                eDay.set(calendar.YEAR, calendar.MONTH, calendar.getActualMaximum(calendar.DATE));
+                int lastDay = eDay.getActualMaximum(calendar.DAY_OF_MONTH);
+                String endday = startDate + lastDay;
+                
+                startDateFormatted = firstDay;
+                endDateFormatted = endday;
+            }
+            
+            if(StringUtils.equals("start", returnGbn)) {
+                returnDate = startDateFormatted;
+            } else if(StringUtils.equals("end", returnGbn)) {
+                returnDate = endDateFormatted;
+            } else {
+                returnDate = DateUtil.getCurrentDateSeparatedByDash();
+            }
+        
+        } catch(NullPointerException nullPointerException) {
+            throw new NfdsException(nullPointerException, "SEARCH_ENGINE_ERROR.0102");
+        } catch(Exception exception) {
+            throw new NfdsException(exception, "SEARCH_ENGINE_ERROR.0101");
+        }
+        
+        return returnDate;
+        
+    }
+    
+    
+}

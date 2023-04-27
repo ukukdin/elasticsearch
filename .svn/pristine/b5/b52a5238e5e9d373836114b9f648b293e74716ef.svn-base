@@ -1,0 +1,475 @@
+package nurier.scraping.setting.controller;
+
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.apache.commons.lang3.StringEscapeUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.ibatis.session.SqlSession;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.servlet.ModelAndView;
+
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nurier.web.common.exception.NfdsException;
+
+import nurier.scraping.common.constant.CommonConstants;
+import nurier.scraping.common.service.DetectionEngineService;
+import nurier.scraping.common.util.AuthenticationUtil;
+import nurier.scraping.common.util.CommonUtil;
+import nurier.scraping.common.util.DateUtil;
+import nurier.scraping.common.util.PagingAction;
+import nurier.scraping.redis.RedisService;
+import nurier.scraping.setting.dao.WhiteListManagementSqlMapper;
+
+/**
+ * Description  : 예외대상관리 (White List) 처리용 Controller
+ * ----------------------------------------------------------------------
+ * 날짜         작업자            수정내역
+ * ----------------------------------------------------------------------
+ * 2015.01.13   scseo            신규생성
+ */
+
+@Controller
+public class WhiteListManagementController {
+    private static final Logger Logger = LoggerFactory.getLogger(WhiteListManagementController.class);
+
+    @Autowired
+    private DetectionEngineService  detectionEngineService;
+    
+    @Autowired
+    private SqlSession sqlSession;
+    
+    /**
+     * 화이트리스트 이동처리 (2015.01.13 - scseo)
+     * @return
+     * @throws Exception
+     */
+    @RequestMapping("/servlet/nfds/setting/white_list_management/white_list_management.fds")
+    public String goToWhiteListManagement() throws Exception {
+        Logger.debug("[WhiteListManagementController][METHOD : goToWhiteListManagement][EXECUTION]");
+
+        CommonUtil.leaveTrace("S", "화이트리스트 페이지 접근");
+        return "scraping/setting/white_list_management/white_list_management.tiles";
+    }
+    
+    
+    /**
+     * White User 신규등록, 수정을 위한 form modal 창 출력 (2015.01.13 - scseo)
+     * @param reqParamMap
+     * @return
+     */
+    @RequestMapping("/scraping/setting/white_list_management/form_of_white_user.fds")
+    public ModelAndView openModalForFormOfWhiteUser(@RequestParam Map<String,String> reqParamMap) {
+        Logger.debug("[WhiteListManagementController][METHOD : openModalForFormOfWhiteUser][EXECUTION]");
+        
+        ModelAndView mav = new ModelAndView();
+        mav.setViewName("scraping/setting/white_list_management/form_of_white_user");
+        
+        String mode            = StringUtils.trimToEmpty((String)reqParamMap.get("mode"));
+        String seqOfWhiteUser  = StringUtils.trimToEmpty((String)reqParamMap.get("seqOfWhiteUser"));
+        Logger.debug("[WhiteListManagementController][METHOD : openModalForFormOfWhiteUser][mode           : {}]", mode);
+        Logger.debug("[WhiteListManagementController][METHOD : openModalForFormOfWhiteUser][seqOfWhiteUser : {}]", seqOfWhiteUser);
+        
+        if(StringUtils.equals("MODE_EDIT", mode) && !(CommonConstants.BLANKCHECK).equals(seqOfWhiteUser)) {  // White User 수정을 위한 MODAL 창
+            WhiteListManagementSqlMapper  sqlMapper       = sqlSession.getMapper(WhiteListManagementSqlMapper.class);
+            HashMap<String,String>        whiteUserStored = sqlMapper.getWhiteUser(seqOfWhiteUser);
+
+            mav.addObject("whiteUserStored", whiteUserStored);
+        }
+        
+        return mav;
+    }
+    
+    
+    /**
+     * White User 리스트 전달 (2015.01.13 - scseo)
+     * @param reqParamMap
+     * @return
+     * @throws Exception
+     */
+    @RequestMapping("/scraping/setting/white_list_management/list_of_white_users.fds")
+    public ModelAndView getListOfWhiteUsers(@RequestParam Map<String,String> reqParamMap) throws Exception {
+        Logger.debug("[WhiteListManagementController][METHOD : getListOfWhiteUsers][EXECUTION]");
+        
+        String pageNumberRequested  = StringUtils.defaultIfBlank(reqParamMap.get("pageNumberRequested"), "1");
+        String numberOfRowsPerPage  = StringUtils.defaultIfBlank(reqParamMap.get("numberOfRowsPerPage"), "10");
+        
+        String userId               = StringUtils.trimToEmpty(reqParamMap.get("userIdForSearching"));
+        if(userId.length() < 32){
+            userId = StringUtils.upperCase(StringUtils.trimToEmpty(userId)); // '이용자ID'
+        }
+        String userName             = StringUtils.trimToEmpty(reqParamMap.get("userNameForSearching"));                              // '고객성명'
+        String branchOffice         = StringUtils.trimToEmpty(reqParamMap.get("branchOfficeForSearching"));                          // '요청사무소'
+        String registrant           = StringUtils.trimToEmpty(reqParamMap.get("registrantForSearching"));                            // '등록자'
+        String isUsed               = StringUtils.trimToEmpty(reqParamMap.get("isUsedForSearching"));                                // '사용여부'
+        String startDate            = StringUtils.remove(StringUtils.trimToEmpty(reqParamMap.get("startDateFormatted")), '-');       // '등록일' 최소날짜범위
+        String endDate              = StringUtils.remove(StringUtils.trimToEmpty(reqParamMap.get("endDateFormatted"  )), '-');       // '등록일' 최대날짜범위
+        if(StringUtils.isNotBlank(startDate)){ startDate = new StringBuffer().append(startDate).append("000000").toString(); }
+        if(StringUtils.isNotBlank(endDate  )){ endDate   = new StringBuffer().append(endDate  ).append("235959").toString(); }
+        
+        WhiteListManagementSqlMapper  sqlMapper = sqlSession.getMapper(WhiteListManagementSqlMapper.class);
+        
+        HashMap<String,String> param = new HashMap<String,String>();
+        param.put("currentPage", pageNumberRequested);
+        param.put("recordSize",  numberOfRowsPerPage);
+        param.put("USERID",      userId);
+        param.put("USERNAME",    userName);
+        param.put("CUSTINFO1",   branchOffice);
+        param.put("RGNAME",      registrant);
+        param.put("USEYN",       isUsed);
+        param.put("START_DATE",  startDate);
+        param.put("END_DATE",    endDate);
+        
+        //////////////////////////////////////////////////////////////////////////////////////////
+        ArrayList<HashMap<String,Object>> listOfWhiteUsers = sqlMapper.getListOfWhiteUsers(param);
+        //////////////////////////////////////////////////////////////////////////////////////////
+        
+        int          totalNumberOfRecords = Integer.parseInt(CommonUtil.getTotalNumberOfRecordsInTable(listOfWhiteUsers));
+        PagingAction pagination           = new PagingAction("/servlet/nfds/setting/white_list_management/list_of_white_users.fds", Integer.parseInt(pageNumberRequested), totalNumberOfRecords, Integer.parseInt(numberOfRowsPerPage), 5, "", "", "pagination");
+        
+        ModelAndView mav = new ModelAndView();
+        mav.setViewName("scraping/setting/white_list_management/list_of_white_users");
+        mav.addObject("paginationHTML",   pagination.getPagingHtml().toString());
+        mav.addObject("listOfWhiteUsers", listOfWhiteUsers);
+        
+        CommonUtil.leaveTrace("S", "화이트리스트 출력");
+        
+        return mav; 
+    }
+    
+    
+    /**
+     * 특정 이용자ID 조회에 대한 처리 (2015.01.13 - scseo)
+     * @param reqParamMap
+     * @return
+     * @throws Exception
+     */
+    /*
+    @RequestMapping("/servlet/nfds/setting/white_list_management/search_for_white_user.fds")
+    public ModelAndView getWhiteUserSearched(@RequestParam Map<String,String> reqParamMap) throws Exception {
+        Logger.debug("[WhiteListManagementController][METHOD : getWhiteUserSearched][EXECUTION]");
+        
+        String userId               = StringUtils.upperCase(StringUtils.trimToEmpty((String)reqParamMap.get("userId")));           // '이용자ID'
+        String userName               = StringUtils.trimToEmpty((String)reqParamMap.get("userName"));           // '고객성명'
+        
+        String pageNumberRequested  = StringUtils.defaultIfBlank(reqParamMap.get("pageNumberRequested"), "1");
+        String numberOfRowsPerPage  = StringUtils.defaultIfBlank(reqParamMap.get("numberOfRowsPerPage"), "15");
+        
+        WhiteListManagementSqlMapper  sqlMapper = sqlSession.getMapper(WhiteListManagementSqlMapper.class);
+        
+        HashMap<String,String> param = new HashMap<String,String>();
+        param.put("currentPage", pageNumberRequested);
+        param.put("recordSize",  numberOfRowsPerPage);
+        param.put("USERID",      userId);
+        param.put("USERNAME",      userName);
+        //////////////////////////////////////////////////////////////////////////////////////////
+        ArrayList<HashMap<String,Object>> listOfWhiteUsers = sqlMapper.getWhiteUserSearched(param);
+        //////////////////////////////////////////////////////////////////////////////////////////
+        
+        int          totalNumberOfRecords = listOfWhiteUsers.size();
+        PagingAction pagination           = new PagingAction("/servlet/nfds/setting/white_list_management/list_of_white_users.fds", Integer.parseInt(pageNumberRequested), totalNumberOfRecords, Integer.parseInt(numberOfRowsPerPage), 5, "", "", "pagination");
+        
+        ModelAndView mav = new ModelAndView();
+        mav.setViewName("nfds/setting/white_list_management/list_of_white_users");
+        mav.addObject("paginationHTML",   pagination.getPagingHtml().toString());
+        mav.addObject("listOfWhiteUsers", listOfWhiteUsers);
+        
+        StringBuffer traceContent = new StringBuffer(50);
+        traceContent.append("조회 이용자ID : ").append(userId).append(", 고객성명 : ").append(userName);
+        CommonUtil.leaveTrace("S", traceContent.toString());
+        
+        return mav; 
+    }
+    */
+    
+    
+    /**
+     * '이용자ID' 에 의한 DB에 저장된 한 건의 WhiteUser 반환 (2015.01.13 - scseo)
+     * @param userId
+     * @return
+     * @throws Exception
+     */
+    private HashMap<String,String> getWhiteUserByUserId(String userId) throws Exception {
+        WhiteListManagementSqlMapper  sqlMapper = sqlSession.getMapper(WhiteListManagementSqlMapper.class);
+        
+        HashMap<String,String> whiteUser = sqlMapper.getWhiteUserByUserId(StringUtils.upperCase(userId));
+        
+        return whiteUser;
+    }
+    
+    
+    /**
+     * White User 등록처리 (2015.01.13 - scseo)
+     * @param reqParamMap
+     * @return
+     * @throws Exception
+     */
+    @RequestMapping("/scraping/setting/white_list_management/register_white_user.fds")
+    public @ResponseBody String registerWhiteUser(@RequestParam HashMap<String,String> reqParamMap) throws Exception {
+        Logger.debug("[WhiteListManagementController][METHOD : registerWhiteUser][EXECUTION]");
+        
+        String userId            = StringUtils.trimToEmpty((String)reqParamMap.get("userId"));           // '이용자ID'
+        String userName          = StringUtils.trimToEmpty((String)reqParamMap.get("userName"));                                // '고객성명'
+        String remark            = StringEscapeUtils.escapeHtml3(StringUtils.trimToEmpty((String)reqParamMap.get("remark")));    // '등록내용'
+        String isUsed            = StringUtils.defaultIfBlank((String)reqParamMap.get("isUsed"), "N");                          // '사용여부'
+        String registrant        = AuthenticationUtil.getUserId();                                                              // '등록자'
+        String registrationDate  = DateUtil.getCurrentDateTimeSeparatedBySymbol();                                              // '등록일'
+        String branchOffice      = StringUtils.trimToEmpty((String)reqParamMap.get("branchOffice"));                            // '요청사무소'
+        Logger.debug("[WhiteListManagementController][METHOD : registerWhiteUser][userId            : {}]", userId);
+        Logger.debug("[WhiteListManagementController][METHOD : registerWhiteUser][userName          : {}]", userName);
+        Logger.debug("[WhiteListManagementController][METHOD : registerWhiteUser][remark            : {}]", remark);
+        Logger.debug("[WhiteListManagementController][METHOD : registerWhiteUser][isUsed            : {}]", isUsed);
+        Logger.debug("[WhiteListManagementController][METHOD : registerWhiteUser][registrant        : {}]", registrant);
+        Logger.debug("[WhiteListManagementController][METHOD : registerWhiteUser][registrationDate  : {}]", registrationDate);
+        Logger.debug("[WhiteListManagementController][METHOD : registerWhiteUser][branchOffice      : {}]", branchOffice);
+        
+        
+        // 꼭 다른 HashMap 으로 복사해서 parameter 값으로 넘겨야함 (reqParamMap 을 그냥 넘기면 작동안됨)
+        HashMap<String,String> param = new HashMap<String,String>();
+        param.put("SEQ_NUM",   "");
+        param.put("USERID",    userId);
+        param.put("USERNAME",  userName);
+        param.put("REMARK",    remark);
+        param.put("USEYN",     isUsed);
+        param.put("RGNAME",    registrant);
+        param.put("RGDATE",    registrationDate);
+        param.put("CUSTINFO1", branchOffice);
+        
+        if(StringUtils.equals("Y", isUsed)) {     // '사용여부'값이 사용일경우
+            //////////////////////////////////////////
+            // registerWhiteUserInCoherenceCache(userId);
+        	// REDIS
+        	setUserBlockingType(userId, CommonConstants.FDS_DECISION_VALUE_OF_WHITEUSER);
+            //////////////////////////////////////////
+        }
+        
+        HashMap<String,String> whiteUserStored = getWhiteUserByUserId(userId);
+        if(whiteUserStored!=null && !StringUtils.equals("", whiteUserStored.get("SEQ_NUM"))) { // 기존에 등록된 '이용자ID'가 이미있을 경우
+            throw new NfdsException("MANUAL", new StringBuffer(50).append("'").append(userId).append("' 아이디는 이미 등록 되어있습니다.").toString());
+        }
+        
+        WhiteListManagementSqlMapper  sqlMapper = sqlSession.getMapper(WhiteListManagementSqlMapper.class);
+        ///////////////////////////////////
+        sqlMapper.registerWhiteUser(param);
+        ///////////////////////////////////
+        
+        StringBuffer traceContent = new StringBuffer(100);
+        traceContent.append(  "이용자ID : "  ).append(userId);
+        traceContent.append(", 고객성명 : "  ).append(userName);
+        traceContent.append(", 요청사무소 : ").append(branchOffice);
+        traceContent.append(", 등록사유 : "  ).append(remark);
+        traceContent.append(", 사용여부 : "  ).append(isUsed);
+        CommonUtil.leaveTrace("I", traceContent.toString());
+        
+        return "REGISTRATION_SUCCESS";
+    }
+    
+    
+    /**
+     * White User 수정 처리 (2015.01.13 - scseo)
+     * @param reqParamMap
+     * @return
+     * @throws Exception
+     */
+    @RequestMapping("/scraping/setting/white_list_management/edit_white_user.fds")
+    public @ResponseBody String editWhiteUser(@RequestParam HashMap<String,String> reqParamMap) throws Exception {
+        Logger.debug("[WhiteListManagementController][METHOD : editWhiteUser][EXECUTION]");
+        
+        String seqOfWhiteUser    = StringUtils.trimToEmpty((String)reqParamMap.get("seqOfWhiteUser"));
+        String userId            = StringUtils.trimToEmpty((String)reqParamMap.get("userId"));                                  // '이용자ID'
+        String userName          = StringUtils.trimToEmpty((String)reqParamMap.get("userName"));                                // '고객성명'
+        String branchOffice      = StringUtils.trimToEmpty((String)reqParamMap.get("branchOffice"));                            // '요청사무소'
+        String remark            = StringEscapeUtils.escapeHtml3(StringUtils.trimToEmpty((String)reqParamMap.get("remark")));    // '등록내용'
+        String isUsed            = StringUtils.defaultIfBlank((String)reqParamMap.get("isUsed"), "N");                          // '사용여부'
+        Logger.debug("[WhiteListManagementController][METHOD : editWhiteUser][userId            : {}]", userId);
+        Logger.debug("[WhiteListManagementController][METHOD : editWhiteUser][userName          : {}]", userName);
+        Logger.debug("[WhiteListManagementController][METHOD : editWhiteUser][branchOffice      : {}]", branchOffice);
+        Logger.debug("[WhiteListManagementController][METHOD : editWhiteUser][remark            : {}]", remark);
+        Logger.debug("[WhiteListManagementController][METHOD : editWhiteUser][isUsed            : {}]", isUsed);
+        
+        // 꼭 다른 HashMap 으로 복사해서 parameter 값으로 넘겨야함 (reqParamMap 을 그냥 넘기면 작동안됨)
+        HashMap<String,String> param = new HashMap<String,String>();
+        param.put("SEQ_NUM",   seqOfWhiteUser);
+      //param.put("USERID",    userId);       // 수정불가
+      //param.put("USERNAME",  userName);     // 수정불가
+      //param.put("CUSTINFO1", branchOffice); // 수정불가
+        param.put("REMARK",    remark);
+        param.put("USEYN",     isUsed);
+        
+        if(StringUtils.equals("Y", isUsed)) { // '사용여부'값이 사용일경우
+            //////////////////////////////////////////
+            // registerWhiteUserInCoherenceCache(userId);
+        	// REDIS
+        	setUserBlockingType(userId, CommonConstants.FDS_DECISION_VALUE_OF_WHITEUSER);
+            //////////////////////////////////////////
+        } else {                              // '사용여부'값이 비사용일경우 (coherence 에서 삭제)
+            ///////////////////////////////////////////
+        	setUserBlockingType(userId, CommonConstants.FDS_DECISION_VALUE_OF_NOT_BLACKUSER);
+            // registerNormalUserInCoherenceCache(userId);
+            ///////////////////////////////////////////
+        }
+        
+        WhiteListManagementSqlMapper  sqlMapper = sqlSession.getMapper(WhiteListManagementSqlMapper.class);
+        ///////////////////////////////
+        sqlMapper.editWhiteUser(param);
+        ///////////////////////////////
+        
+        StringBuffer traceContent = new StringBuffer(100);
+        traceContent.append("sequence 번호 : ").append(seqOfWhiteUser);
+        traceContent.append(", 이용자ID : "   ).append(userId);
+        traceContent.append(", 고객성명 : "   ).append(userName);
+        traceContent.append(", 요청사무소 : " ).append(branchOffice);
+        traceContent.append(", 등록사유 : "   ).append(remark);
+        traceContent.append(", 사용여부 : "   ).append(isUsed);
+        CommonUtil.leaveTrace("U", traceContent.toString());
+        
+        return "EDIT_SUCCESS";
+    }
+    
+    
+    /**
+     * White User 삭제 처리 (2015.01.13 - scseo)
+     * @param reqParamMap
+     * @return
+     * @throws Exception
+     */
+    @RequestMapping("/scraping/setting/white_list_management/delete_white_user.fds")
+    public @ResponseBody String deleteWhiteUser(@RequestParam Map<String,String> reqParamMap) throws Exception {
+        Logger.debug("[WhiteListManagementController][METHOD : deleteWhiteUser][EXECUTION]");
+        
+        String seqOfWhiteUser = StringUtils.trimToEmpty((String)reqParamMap.get("seqOfWhiteUser"));
+        Logger.debug("[WhiteListManagementController][METHOD : deleteWhiteUser][seqOfWhiteUser : {}]", seqOfWhiteUser);
+        if((CommonConstants.BLANKCHECK).equals(seqOfWhiteUser)) {
+            throw new NfdsException("MANUAL", "seq 정보가 없습니다.");
+        }
+        
+        WhiteListManagementSqlMapper  sqlMapper       = sqlSession.getMapper(WhiteListManagementSqlMapper.class);
+        HashMap<String,String>        whiteUserStored = sqlMapper.getWhiteUser(seqOfWhiteUser);
+        String userId       = StringUtils.trimToEmpty(whiteUserStored.get("USERID"));
+        String userName     = StringUtils.trimToEmpty(whiteUserStored.get("USERNAME"));
+        String branchOffice = StringUtils.trimToEmpty(whiteUserStored.get("CUSTINFO1"));
+        String isUsed       = StringUtils.trimToEmpty(whiteUserStored.get("USEYN"));
+        String remark       = StringEscapeUtils.escapeHtml3(StringUtils.trimToEmpty((String)reqParamMap.get("remark")));    // '등록내용'
+        
+        ///////////////////////////////////////////
+        // registerNormalUserInCoherenceCache(userId);
+        // REDIS
+        setUserBlockingType(userId, CommonConstants.FDS_DECISION_VALUE_OF_NOT_BLACKUSER);
+        ///////////////////////////////////////////
+        //////////////////////////////////////////
+        sqlMapper.deleteWhiteUser(seqOfWhiteUser);
+        //////////////////////////////////////////
+        
+        
+        ////////////////////////////////////////////////////
+        StringBuffer traceContent = new StringBuffer(100);
+        traceContent.append("sequence 번호 : ").append(seqOfWhiteUser);
+        traceContent.append(", 이용자ID : "   ).append(userId);
+        traceContent.append(", 고객성명 : "   ).append(userName);
+        traceContent.append(", 요청사무소 : " ).append(branchOffice);
+        traceContent.append(", 등록사유 : "   ).append(remark);
+        traceContent.append(", 사용여부 : "   ).append(isUsed);
+        CommonUtil.leaveTrace("D", traceContent.toString());
+        ////////////////////////////////////////////////////
+        
+        return "DELETION_SUCCESS";
+    }
+    
+    
+    /**
+     * 해당 뱅킹이용자를 coherence에 예외대상자(WhiteUser)로 등록처리 (2015.01.13 - scseo)
+     * @param userId
+     */
+    private void registerWhiteUserInCoherenceCache(String userId) throws Exception {
+        Logger.debug("[WhiteListManagementController][METHOD : registerWhiteUserInCoherenceCache][EXECUTION]");
+        
+        try {
+            if(!StringUtils.equals(CommonConstants.FDS_DECISION_VALUE_OF_WHITEUSER, detectionEngineService.getFdsDecisionValueInCoherenceCache(userId))) { // 'WhiteUser'가 아닐경우 'WhiteUser'로 변경처리
+                detectionEngineService.setFdsDecisionValueInScoreCacheOfCustomer(userId, CommonConstants.FDS_DECISION_VALUE_OF_WHITEUSER);
+            }
+            
+        } catch(NullPointerException nullPointerException) { // Coherence에 해당 이용자에 대한 스코어값이 존재하지 않을 경우 'NullPointerException' 발생
+            Logger.debug("[WhiteListManagementController][METHOD : registerWhiteUserInCoherenceCache][cacheForScore.put() nullPointerException : {}]", nullPointerException.getMessage());
+            throw new NfdsException(nullPointerException, "COHERENCE_ERROR.0001");
+        } catch(RuntimeException runtimeException) {
+            Logger.debug("[WhiteListManagementController][METHOD : registerWhiteUserInCoherenceCache][cacheForScore.put() runtimeException : {}]", runtimeException.getMessage());
+            throw new NfdsException(runtimeException, "COHERENCE_ERROR.0002");
+        } catch(Exception exception) {
+            Logger.debug("[WhiteListManagementController][METHOD : registerWhiteUserInCoherenceCache][cacheForScore.put() exception : {}]", exception.getMessage());
+            throw exception;
+        }
+    }
+    
+    
+    /**
+     * 해당 뱅킹이용자를 coherence에 보통사용자로 등록처리 (2015.01.13 - scseo)
+     * @param userId
+     */
+    private void registerNormalUserInCoherenceCache(String userId) throws Exception {
+        Logger.debug("[WhiteListManagementController][METHOD : registerNormalUserInCoherenceCache][EXECUTION]");
+        
+        try {
+            if(StringUtils.equals(CommonConstants.FDS_DECISION_VALUE_OF_WHITEUSER, detectionEngineService.getFdsDecisionValueInCoherenceCache(userId))) { // 'WhiteUser' 로 되어있을 경우 변경처리
+                detectionEngineService.setFdsDecisionValueInScoreCacheOfCustomer(userId, CommonConstants.FDS_DECISION_VALUE_OF_NOT_BLACKUSER);
+            }
+            
+        } catch(NullPointerException nullPointerException) { // Coherence에 해당 이용자에 대한 스코어값이 존재하지 않을 경우 'NullPointerException' 발생
+            Logger.debug("[WhiteListManagementController][METHOD : registerNormalUserInCoherenceCache][cacheForScore.put() nullPointerException : {}]", nullPointerException.getMessage());
+            throw new NfdsException(nullPointerException, "COHERENCE_ERROR.0001");
+        } catch(RuntimeException runtimeException) {
+            Logger.debug("[WhiteListManagementController][METHOD : registerNormalUserInCoherenceCache][cacheForScore.put() runtimeException : {}]", runtimeException.getMessage());
+            throw new NfdsException(runtimeException, "COHERENCE_ERROR.0002");
+        } catch(Exception exception) {
+            Logger.debug("[WhiteListManagementController][METHOD : registerNormalUserInCoherenceCache][cacheForScore.put() exception : {}]", exception.getMessage());
+            throw exception;
+        }
+    }
+    
+    /**
+     * 현재시간값 반환처리 (2015.01.13 - scseo)
+     * @return
+     */
+    private String getCurrentDateTime() {
+        Calendar calendar = Calendar.getInstance();
+        Date     date     = calendar.getTime();
+        return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(date);
+    }
+    
+	/**
+	 * BlockingType 변경 및 수정
+	 * */
+	public void setUserBlockingType(String userId, String blockingType) {
+		try {
+			if(userId != null) {
+				RedisService redisService = RedisService.getInstance();
+				ObjectMapper objectMapper = new ObjectMapper();
+				if(redisService.exists(userId) == 1L) {
+					Map<String, Object> map = objectMapper.readValue(redisService.get(userId), HashMap.class);
+					map.put("blockingType", blockingType);
+					redisService.set(userId, objectMapper.writeValueAsString(map), true);
+				}
+			}
+		} catch (JsonParseException e) {
+			System.out.println(e);
+		} catch (JsonMappingException e) {
+			System.out.println(e);
+		} catch (IOException e) {
+			System.out.println(e);
+		}
+	}
+
+
+} // end of class

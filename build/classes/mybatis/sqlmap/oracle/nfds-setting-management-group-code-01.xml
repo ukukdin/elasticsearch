@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding= "UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+ 
+<mapper namespace="nurier.scraping..setting.dao.SettingGroupDataManageSqlMapper">
+    
+    <select id="getGroupDataListL" resultType="groupDataVO">
+        SELECT G.*, (SELECT GRPNAM
+                    FROM NFDS_GROUP_CODE
+                    WHERE GRPCOD = G.PARENT
+                    GROUP BY GRPNAM) CODNAME
+        FROM NFDS_GROUP_CODE G
+        START WITH LENGTH(GRPCOD) = 3
+        CONNECT BY PRIOR GRPCOD = PARENT
+        ORDER BY GRPCOD, LEVEL
+    </select>
+    <select id="getGroupDataListR" resultType="groupDataVO">
+        SELECT G.*, (SELECT GRPNAM
+                    FROM NFDS_GROUP_CODE
+                    WHERE GRPCOD = G.PARENT
+                    GROUP BY GRPNAM) CODNAME
+        FROM NFDS_GROUP_CODE G
+        WHERE PARENT = '000'
+        START WITH LENGTH(GRPCOD) = 3
+        CONNECT BY PRIOR GRPCOD = PARENT
+        ORDER BY GRPCOD, LEVEL
+    </select>
+    
+    <select id="getGroupDataListUser" resultType="groupDataVO">
+        SELECT G.*, (SELECT GRPNAM
+                    FROM NFDS_GROUP_CODE
+                    WHERE GRPCOD = G.PARENT
+                    GROUP BY GRPNAM) CODNAME
+        FROM NFDS_GROUP_CODE G
+        START WITH LENGTH(GRPCOD) = 3
+        CONNECT BY PRIOR GRPCOD = PARENT
+        ORDER BY GRPCOD, LEVEL
+    </select>
+    
+    <select id="getGroupDataSelect" resultType="groupDataVO">
+        SELECT G.*, (SELECT GRPNAM
+                    FROM NFDS_GROUP_CODE
+                    WHERE GRPCOD = G.PARENT
+                    GROUP BY GRPNAM) CODNAME
+        FROM NFDS_GROUP_CODE G
+        WHERE PARENT = #{parent}
+        ORDER BY GRPCOD
+    </select>
+
+    <select id="getGroupDataInfo" parameterType="groupDataVO" resultType="groupDataVO">
+        SELECT *
+        FROM NFDS_GROUP_CODE
+        WHERE SEQ_NUM = #{seq_num}
+    </select>
+    
+    <select id="getGroupMaxCode" parameterType="groupDataVO" resultType="string">
+        SELECT DECODE(LPAD(TO_CHAR(MAX(GRPCOD) + 1), #{parentlen}, '0'), null, CONCAT(#{parent},'001'), LPAD(TO_CHAR(MAX(GRPCOD) + 1), #{parentlen}, '0')) GRPCOD_MAX
+        FROM NFDS_GROUP_CODE
+        WHERE LENGTH(GRPCOD) = #{parentlen}
+        <if test='parent != ""'>
+        AND GRPCOD LIKE CONCAT(#{parent},'%')
+        </if> 
+    </select>
+    
+    <insert id="setGroupDataInsert" parameterType="groupDataVO">
+        <selectKey resultType="String" keyProperty="seq_num" order="BEFORE">
+            SELECT NVL(MAX(SEQ_NUM),0)+1 as seq_num FROM NFDS_GROUP_CODE
+        </selectKey>
+       
+        INSERT INTO NFDS_GROUP_CODE (
+            SEQ_NUM,
+            GRPNAM,
+            GRPCOD,
+            GRPGBN,
+            GRPGNM,
+            PARENT,
+            ORDRNO,
+            IS_USED,
+            NOTGROUP,
+            REMARK
+        ) VALUES (
+            #{seq_num},
+            #{grpnam},
+            #{grpcod},
+            #{grpgbn},
+            #{grpgnm},
+            #{parent},
+            #{ordrno},
+            #{is_used},
+            #{notgroup},
+            #{remark}
+        )
+    </insert>
+
+    <update id="setGroupDataUpdate" parameterType="groupDataVO">
+        UPDATE NFDS_GROUP_CODE SET
+              GRPNAM           = #{grpnam}
+            , GRPDBN           = #{grpgbn}
+            , PARENT           = #{parent}
+            , ORDRNO           = #{ordrno}
+            , IS_USED          = #{is_used}
+            , REMARK           = #{remark}
+            
+        WHERE SEQ_NUM = #{seq_num}
+    </update>
+    
+    <delete id="setGroupDataDelete" parameterType="groupDataVO">
+        DELETE FROM NFDS_GROUP_CODE
+        WHERE SEQ_NUM = #{seq_num}
+    </delete>
+    
+</mapper>

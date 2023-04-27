@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:sfixCommon="http://sfix.kfisac.or.kr/common-1" targetNamespace="http://sfix.kfisac.or.kr/common-1" elementFormDefault="qualified" attributeFormDefault="unqualified" version="1.0" xml:lang="ko">
+	<xs:annotation>
+		<xs:documentation>이 스키마는 금융회사 간 이상금융거래정보 공유를 위해 금융보안원에서 개발되었습니다.</xs:documentation>
+		<xs:appinfo>
+			<schema>SFIX Common</schema>
+			<version>1.0</version>
+			<date>2016-02-22 09:00:00 AM</date>
+			<short_description>Structured Fraud Information eXpression (SFIX) - 이상금융거래정보 표현 형식 (스키마)</short_description>
+			<terms_of_use>Copyright (c) 2015, Financial Security Institutes. All rights reserved.</terms_of_use>
+		</xs:appinfo>
+	</xs:annotation>
+	<xs:simpleType name="Timestamp">
+		<xs:annotation>
+			<xs:documentation>시간정보를 정의한 것으로 XSD에서 사용하는 시간 타입을 사용합니다.</xs:documentation>
+			<xs:documentation>년-월-일T시간:분:초 형태로 시간을 정의합니다. (예) 2015-01-15T14:00:00</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:dateTime"/>
+	</xs:simpleType>
+	<xs:simpleType name="ChecksumType">
+		<xs:annotation>
+			<xs:documentation>SFIX_Data 부분을 SHA-256 알고리즘으로 해쉬한 값을 저장하기 위해 사용합니다.</xs:documentation>
+			<xs:documentation>ChecksumType에 저장된 해쉬값은 금융회사가 작성한 정보의 무결성을 보장하기 위해 사용됩니다.</xs:documentation>
+			<xs:documentation>SHA-256 알고리즘 검사 타입</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:annotation>
+				<xs:documentation>SHA-256 해쉬 알고리즘으로 생성된 64바이트 값을 체크하기 위한 정규식 패턴입니다.</xs:documentation>
+			</xs:annotation>
+			<xs:pattern value="[a-fA-F0-9]{64}"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="ReferenceType">
+		<xs:annotation>
+			<xs:documentation>이전에 공유된 이상금융거래정보를 참조하기 위해 사용됩니다.</xs:documentation>
+			<xs:documentation>Reference로 지정할 수 있는 것은 SFIX_ID 와 SFIX_Data > Information > Identification 을 지정할 수 있습니다.</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:pattern value="SFIX-([0-9]{1,4})-([0-9]{4})-([0-9]+)"/>
+			<xs:pattern value="([0-9]{1,4})-([0-9]{4})-([0-9]+)"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="SFIXIdentificationType">
+		<xs:annotation>
+			<xs:documentation>SFIX_Header에 정의된 SFIX 고유번호를 정의하기 위해 사용됩니다.</xs:documentation>
+			<xs:documentation>SFIX Identification은 SFIX-(공유 금융회사 기관코드)-(년도)-(번호)로 되어 있는 고유값이며, FISS에서 자동으로 생성됩니다.</xs:documentation>
+			<xs:documentation>FISS에서 정보 공유 시 사용되는 식별자로 SFIX_Header에 위치</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:annotation>
+				<xs:documentation>SFIX ID값을 검증하기 위한 정규식 패턴입니다.</xs:documentation>
+				<xs:documentation>SFIX-(공유 금융회사 기관코드)-(4자리 년도)-(시퀀스번호)로 구성되어 있습니다.</xs:documentation>
+			</xs:annotation>
+			<xs:pattern value="SFIX-([0-9]{1,4})-([0-9]{4})-([0-9]+)"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="IdentificationType">
+		<xs:annotation>
+			<xs:documentation>Identification</xs:documentation>
+			<xs:documentation>SFIX_Data의 Information에 정의된 고유번호로 금융회사에서 이상금융거래정보 공유 시 금융회사에서 부여하는 번호입니다.</xs:documentation>
+			<xs:documentation>Identification은 (공유 금융회사 기관코드)-(년도)-(번호)로 되어 있는 고유값이며, Identification의 번호는 SFIX Identification 번호와 다릅니다.</xs:documentation>
+			<xs:documentation>금융회사에서 FISS로 정보 공유 요청 시 금융회사에서 사용하는 식별자로 SFIX_Data의 Information에 위치</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:annotation>
+				<xs:documentation>SFIX_Data > Information > Identification 의 값을 검증하기 위한 정규식 패턴입니다.</xs:documentation>
+				<xs:documentation>(공유 금융회사 기관코드)-(4자리 년도)-(시퀀스번호)로 구성되어 있습니다.</xs:documentation>
+				<xs:documentation>* 시퀀스번호는 SFIX Identification의 시퀀스 번호와 다릅니다.</xs:documentation>
+			</xs:annotation>
+			<xs:pattern value="([0-9]{1,4})-([0-9]{4})-([0-9]+)"/>
+		</xs:restriction>
+	</xs:simpleType>
+</xs:schema>

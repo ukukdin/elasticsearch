@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "HTTP://mybatis.org/dtd/mybatis-3-config.dtd">
+
+<configuration>
+    <typeAliases>
+        <typeAlias type="nurier.scraping.common.vo.ReportVO"             alias="reportVO"           />
+        <typeAlias type="nurier.scraping.common.vo.AuthGroupVO"          alias="authGroupVO"        />
+        <typeAlias type="nurier.scraping.common.vo.BlackUserVO"          alias="blackUserVO"        />
+        <typeAlias type="nurier.scraping.common.vo.UserAuthVO"           alias="userAuthVO"         />
+        <typeAlias type="nurier.scraping.common.vo.GlobalIpVO"           alias="globalIpVO"         />
+        <typeAlias type="nurier.scraping.common.vo.RemoteBlackVO"        alias="remoteBlackVO"      />
+        <typeAlias type="nurier.scraping.common.vo.MenuDataVO"           alias="menuDataVO"         />
+        <typeAlias type="nurier.scraping.common.vo.GroupDataVO"          alias="groupDataVO"        />
+        <typeAlias type="nurier.scraping.common.vo.DashBoardDataVO"      alias="dashBoardDataVO"    />
+        <typeAlias type="nurier.scraping.common.vo.CodeDataVO"           alias="codeDataVO"         />
+        <typeAlias type="nurier.scraping.common.vo.QueryVO"              alias="queryVO"            />
+        <typeAlias type="nurier.scraping.common.vo.StatisticsDataVO"     alias="statisticsDataVO"   />
+        <typeAlias type="nurier.scraping.common.vo.RuleScorePolicyVO"    alias="ruleScorePolicyVO"  />
+        <typeAlias type="nurier.scraping.member.memberVo.MemberVO"    		alias="memberVO"  />
+        <typeAlias type="nurier.scraping.member.project.model.VO.ProjectVO"    alias="projectVO"  />
+        <typeAlias type="nurier.scraping.member.project.model.VO.ProjectInVO"    alias="projectInVO"  />
+        <typeAlias type="nurier.scraping.member.project.model.VO.ProjectInMemberVO"    alias="projectInMemberVO"  />
+    </typeAliases>
+
+
+
+    <mappers>
+
+        <mapper resource="mybatis/sqlmap/oracle/common-paging.xml"                               		 />  	<!-- Common  - Paging 1-->
+        <mapper resource="mybatis/sqlmap/oracle/nfds-search-telegram-01.xml"                             />  	<!-- search - 전문원본검색 1-->
+        <mapper resource="mybatis/sqlmap/oracle/nfds-search-civillist-01.xml"                            />  	<!-- 고객센터 - 민원처리 통계 1-->
+        <mapper resource="mybatis/sqlmap/oracle/nfds-setting-management-black-information-01.xml"   	 />  	<!-- 정보공유 블랙리스트 -->
+        <mapper resource="mybatis/sqlmap/oracle/nfds-member.xml"                                         />  	<!-- 멤버 프로젝트1-->
+        <mapper resource="mybatis/sqlmap/oracle/nfds-setting-management-black-user-01.xml"          	 /> 	<!-- 블랙리스트관리 (NewVersion)1 -->
+        <mapper resource="mybatis/sqlmap/oracle/nfds-setting-management-remote-blacklist-01.xml"         />  	<!-- 원격프로그램 관리 -->
+        <mapper resource="mybatis/sqlmap/oracle/rule-management-01.xml"                             	 />		<!-- 탐지 룰 관리 -->
+        <mapper resource="mybatis/sqlmap/oracle/nfds-setting-management-statistics-data-01.xml"          />  	<!-- 통계데이터 관리 -->
+        <mapper resource="mybatis/sqlmap/oracle/nfds-setting-management-monitoring-01.xml"               />  	<!-- Setting - 사용자 모니터링관리 1-->        
+        <mapper resource="mybatis/sqlmap/oracle/nfds-setting-management-global-ip-01.xml"                />  	<!-- 국가별 IP관리1 -->
+        <mapper resource="mybatis/sqlmap/oracle/setting-management-user-group-01.xml"              		 />  	<!-- User Group 관리용 1-->
+        <mapper resource="mybatis/sqlmap/oracle/setting-management-user-01.xml"                  		 />  	<!-- 사용자 관리용 1-->
+        <mapper resource="mybatis/sqlmap/oracle/setting-management-menu-01.xml"                   		 />  	<!-- 메뉴 관리용 -->
+        <mapper resource="mybatis/sqlmap/oracle/nfds-setting-management-report-01.xml"                   />  	<!-- 보고서/알림설정 - 감사로그  -->
+        <mapper resource="mybatis/sqlmap/oracle/nfds-setting-management-report-02.xml"                   />
+        <mapper resource="mybatis/sqlmap/oracle/setting-management-code-01.xml"                  		 /> 	<!-- 설정 - 공통코드관리 1-->
+        <mapper resource="mybatis/sqlmap/oracle/nfds-setting-management-rule-score-policy-01.xml" 		 />   	<!-- 룰/스코어 정책 관리 -->
+        <mapper resource="mybatis/sqlmap/oracle/nfds-setting-management-rule-01.xml"                     />  	<!-- FDS룰 편집 (NewVersion) -->
+        <mapper resource="mybatis/sqlmap/oracle/nfds-setting-management-score-policy-01.xml"             />  	<!-- 설정 - 보고서/알람설정 - 스코어별대응정책 -->
+        <mapper resource="mybatis/sqlmap/oracle/nfds-setting-management-agent-version-01.xml"            />  	<!-- 설정 - FDS데이터관리 - Agent버전 관리 -->
+        <mapper resource="mybatis/sqlmap/oracle/nfds-setting-management-query-01.xml"                    /> 	<!-- 설정 - 쿼리탐색기 1-->
+        <mapper resource="mybatis/sqlmap/oracle/nfds-setting-management-white-user-01.xml"               />  	<!-- 화이트리스트관리 (예외대상관리)1 -->
+        <mapper resource="mybatis/sqlmap/oracle/setting-management-es-information-01.xml"           	 />  	<!-- 설정 - Es 리스트 1-->        
+		<mapper resource="mybatis/sqlmap/oracle/nfds-setting-management-group-code-01.xml"				 />		<!-- Group 관리 (Group Code 관리) -->
+   	    <mapper resource="mybatis/sqlmap/oracle/nfds-setting-management-remote-program-exception-01.xml" /> 	<!-- 설정 - 원격 프로그램 예외관리 -->
+  	    <mapper resource="mybatis/sqlmap/oracle/nfds-setting-management-cacheloader-01.xml"              />  	<!-- 설정 - Coherence 에 Data upload 처리 1-->
+  	    <mapper resource="mybatis/sqlmap/oracle/nfds-setting-management-project.xml"     		         />  	<!-- 프로젝트 관리 -->
+   
+
+       
+        <!-- mysql -->
+        <!-- <mapper resource="mybatis/sqlmap/mysql/common-paging.xml" />
+        <mapper resource="mybatis/sqlmap/mysql/mysql-nfds-member.xml" />
+        <mapper resource="mybatis/sqlmap/mysql/mysql-setting-management-user-01.xml" /> -->
+
+    </mappers>
+</configuration>
+

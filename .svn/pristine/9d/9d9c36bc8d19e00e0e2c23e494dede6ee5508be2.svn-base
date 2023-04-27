@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding= "UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+ 
+<mapper namespace="nurier.scraping.setting.dao.FdsRuleManagementSqlMapper">
+    
+    <select id="getTotalNumberOfRecordsOfFdsRule" parameterType="string" resultType="int">
+        SELECT
+            COUNT(RULE_ID)
+        FROM 
+            NFDS_RULE
+    </select>
+    
+    
+    <!-- 접속한 user 의 FDS Rule list 반환 -->
+    <select id="getListOfFdsRules" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        <include refid="paging.headerPagingStart"/>
+        SELECT
+            TO_CHAR(SEQ_NUM)     AS SEQ_NUM,
+            APPLICATION_ID       AS APPLICATION_ID,
+            PROCESSOR_ID         AS PROCESSOR_ID,
+            RULE_ID              AS RULE_ID,
+            RULE_NAME            AS RULE_NAME,
+            TO_CHAR(RULE_SCORE)  AS RULE_SCORE,
+            RULE_SCRIPT          AS RULE_SCRIPT,
+            GROUP_CODE           AS GROUP_CODE,
+            (SELECT GRPNAM FROM NFDS_GROUP_CODE WHERE GRPCOD = GROUP_CODE) AS GROUP_CODE_NAME,
+            IS_USED              AS IS_USED,
+            RULE_DESC            AS RULE_DESC
+        FROM 
+            NFDS_RULE
+        ORDER BY
+            RGDATE DESC
+        <include refid="paging.footerPagingEnd"/>
+    </select>
+    
+    
+    <!-- FDS Rule 신규등록처리 -->
+    <insert id="createNewFdsRule" parameterType="java.util.HashMap">
+    
+        <selectKey resultType="String" keyProperty="seqNum" order="BEFORE">
+            SELECT NVL(MAX(SEQ_NUM),0)+1 AS SEQ_NUM FROM NFDS_RULE
+        </selectKey>
+        
+        <![CDATA[
+        INSERT INTO NFDS_RULE (
+            SEQ_NUM,
+            APPLICATION_ID,
+            PROCESSOR_ID,
+            RULE_ID,
+            RULE_NAME,
+            RULE_SCORE,
+            RULE_SCRIPT,
+            RULE_GROUP_NAME,
+            GROUP_CODE,
+            IS_USED,
+            RGDATE,
+            RGNAME,
+            RULE_DESC
+        ) VALUES (
+            #{seqNum},
+            #{applicationId},
+            #{processorId},
+            #{ruleId},
+            #{ruleName},
+            #{ruleScore},
+            #{ruleScript},
+            #{ruleGroupName},
+            #{groupCode},
+            #{isUsed},
+            TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'),
+            #{registrant},
+            #{ruleDesc}
+        )
+        ]]>
+    </insert>
+    
+    
+    <!-- 한 건의 FDS Rule 반환 -->
+    <select id="getFdsRuleByRuleId" parameterType="string" resultType="java.util.HashMap">
+        SELECT
+            TO_CHAR(SEQ_NUM)     AS SEQ_NUM,
+            APPLICATION_ID       AS APPLICATION_ID,
+            PROCESSOR_ID         AS PROCESSOR_ID,
+            RULE_ID              AS RULE_ID,
+            RULE_NAME            AS RULE_NAME,
+            TO_CHAR(RULE_SCORE)  AS RULE_SCORE,
+            RULE_SCRIPT          AS RULE_SCRIPT,
+            RULE_GROUP_NAME      AS RULE_GROUP_NAME,
+            GROUP_CODE           AS GROUP_CODE,
+            (SELECT GRPNAM FROM NFDS_GROUP_CODE WHERE GRPCOD = GROUP_CODE) AS GROUP_CODE_NAME,
+            IS_USED              AS IS_USED,
+            RULE_DESC            AS RULE_DESC
+        FROM
+            NFDS_RULE
+        WHERE 
+            RULE_ID = #{fdsRuleId}
+    </select>
+    
+    
+    <!-- 한 건의 FDS Rule 반환 -->
+    <select id="getFdsRule" parameterType="string" resultType="java.util.HashMap">
+        SELECT
+            TO_CHAR(SEQ_NUM)     AS SEQ_NUM,
+            APPLICATION_ID       AS APPLICATION_ID,
+            PROCESSOR_ID         AS PROCESSOR_ID,
+            RULE_ID              AS RULE_ID,
+            RULE_NAME            AS RULE_NAME,
+            TO_CHAR(RULE_SCORE)  AS RULE_SCORE,
+            RULE_SCRIPT          AS RULE_SCRIPT,
+            RULE_GROUP_NAME      AS RULE_GROUP_NAME,
+            GROUP_CODE           AS GROUP_CODE,
+            (SELECT GRPNAM FROM NFDS_GROUP_CODE WHERE GRPCOD = GROUP_CODE) AS GROUP_CODE_NAME,
+            IS_USED              AS IS_USED,
+            RULE_DESC            AS RULE_DESC
+        FROM
+            NFDS_RULE
+        WHERE 
+            SEQ_NUM = #{seqOfFdsRule}
+    </select>
+    
+    
+    <!-- FDS Rule 수정처리 -->
+    <update id="editFdsRule" parameterType="java.util.HashMap">
+        <![CDATA[
+        UPDATE
+            NFDS_RULE
+        SET
+            APPLICATION_ID    = #{applicationId},
+            PROCESSOR_ID      = #{processorId},
+          
+            RULE_NAME         = #{ruleName},
+            RULE_SCORE        = #{ruleScore},
+            RULE_SCRIPT       = #{ruleScript},
+            RULE_GROUP_NAME   = #{ruleGroupName},
+            GROUP_CODE        = #{groupCode},
+            IS_USED           = #{isUsed},
+            MODDATE           = TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'),
+            MODNAME           = #{registrant},
+            RULE_DESC         = #{ruleDesc}
+        WHERE 
+            SEQ_NUM           = #{seqOfFdsRule}
+        ]]>
+    </update>
+    
+    
+    <!-- FDS Rule 삭제처리 -->
+    <delete id="deleteFdsRule" parameterType="string">
+        DELETE FROM 
+            NFDS_RULE
+        WHERE 
+            SEQ_NUM = #{seqOfFdsRule}
+    </delete>
+    
+</mapper>

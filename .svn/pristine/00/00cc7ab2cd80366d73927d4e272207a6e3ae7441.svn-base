@@ -1,0 +1,192 @@
+package nurier.scraping.search.controller;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.ibatis.session.SqlSession;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.ModelAndView;
+
+import nurier.scraping.common.util.CommonUtil;
+import nurier.scraping.common.util.DateUtil;
+import nurier.scraping.common.util.PagingAction;
+import nurier.scraping.elasticsearch.ElasticsearchService;
+import nurier.scraping.setting.dao.EsManagementSqlMapper;
+
+
+
+/**
+ * Description  : '종합상황판' 관련 업무 처리용 Controller class
+ * ----------------------------------------------------------------------
+ * 날짜         작업자            수정내역
+ * ----------------------------------------------------------------------
+ * 2014.07.01  scseo            신규생성
+ */
+
+@Controller
+public class SearchForStateController {
+    private static final Logger Logger = LoggerFactory.getLogger(SearchForStateController.class);
+    
+    
+    @Autowired
+    private ElasticsearchService elasticSearchService;
+    
+    @Autowired
+    private SqlSession sqlSession;
+    
+    
+    /**
+     * 종합상황판 첫 화면
+     * @return
+     * @throws Exception
+     */
+    @RequestMapping("/servlet/nfds/search/search_for_state/search.fds")
+    public String goToSearch() throws Exception {
+        Logger.debug("[SearchForStateController][METHOD : goToSearch][BEGIN]");
+        
+        return "scraping/search/search_for_state/search.tiles";
+    }
+    
+    /**
+     * [검색엔진 백업서버용]
+     * 종합상황판 첫 화면
+     * @return
+     * @throws Exception
+     */
+    @RequestMapping("/servlet/nfds/search/search_for_state/search_for_backup_copy.fds")
+    public ModelAndView goToSearchForBackupCopy() throws Exception {
+        Logger.debug("[SearchForStateController][METHOD : goToSearch][BEGIN]");
+        
+        ModelAndView mav = new ModelAndView();
+        mav.setViewName("scraping/search/search_for_state/search.tiles");
+        CommonUtil.activateSearchForBackupCopyOfSearchEngine(mav);
+        return mav;
+    }
+    
+    
+    /**
+     * 검색결과 jqGrid 화면 
+     * @return
+     * @throws Exception
+     */
+    @RequestMapping("/servlet/nfds/search/search_for_state/list_of_search_results.fds")
+    public ModelAndView getListOfSearchResults(@RequestParam Map<String,String> reqParamMap) throws Exception {
+        Logger.debug("[SearchForStateController][METHOD : getListOfSearchResults][BEGIN]");
+        
+       String pageNumberRequested  = StringUtils.defaultIfBlank(reqParamMap.get("pageNumberRequested"), "1");
+       String numberOfRowsPerPage  = StringUtils.defaultIfBlank(reqParamMap.get("numberOfRowsPerPage"), "10");
+//        String totalNumberOfRecords = String.valueOf(elasticSearchService.getTotalNumberOfDocuments(CommonConstants.INDEX_NAME_OF_FDS_MST, CommonConstants.TYPE_NAME_OF_FDS_MST));
+//        String totalNumberOfPages   = String.valueOf(Math.ceil( Double.parseDouble(totalNumberOfRecords) / Double.parseDouble(numberOfRowsPerPage) ));
+        
+        int offset  = Integer.parseInt(numberOfRowsPerPage);
+        int start   = (Integer.parseInt(pageNumberRequested) - 1) * offset;
+        Logger.debug("[SearchForStateController][METHOD : getListOfSearchResults][start  : {}]", start);
+        Logger.debug("[SearchForStateController][METHOD : getListOfSearchResults][offset : {}]", offset);
+       
+        EsManagementSqlMapper 			  sqlMapper 			  = sqlSession.getMapper(EsManagementSqlMapper.class);
+    	
+        HashMap<String,Object> param = new HashMap<String,Object>();
+        
+        String fromDateTime	 = DateUtil.getFormattedDateTimeHH24(reqParamMap.get("startDateFormatted"), reqParamMap.get("startTimeFormatted")+ ".000");
+        String toDateTime	 = DateUtil.getFormattedDateTimeHH24(reqParamMap.get("endDateFormatted"), reqParamMap.get("endTimeFormatted")+ ".999");
+        param.put("fromDateTime", 		fromDateTime.toString()									);
+        param.put("toDateTime", 		toDateTime.toString()									);
+        
+        ArrayList<HashMap<String, Object>> informationParam = sqlMapper.getList(param);
+        
+        Logger.debug("[ElasticSearchService][getLogDataOfFdsMst][EXECUTION][BEGIN][informationParam] : {}", 			informationParam);        
+        Logger.debug("[ElasticSearchService][getLogDataOfFdsMst][EXECUTION][BEGIN][fromDateTime] : {}", 				fromDateTime);        
+        Logger.debug("[ElasticSearchService][getLogDataOfFdsMst][EXECUTION][BEGIN][toDateTime] : {}", 					toDateTime);        
+        Logger.debug("[ElasticSearchService][getLogDataOfFdsMst][EXECUTION][BEGIN][informationParam.size()] : {}", 		informationParam.size());        
+        
+        // FDS_MST 기준으로 화면에 표시
+    	reqParamMap.put("nodeName", 		informationParam.get(0).get("NODEINFO").toString()		);
+    	reqParamMap.put("clusterName", 		informationParam.get(0).get("CLUSTERNAME").toString()	);
+    	reqParamMap.put("pageName", 		"historySearch"											);
+        
+    	HashMap<String,Object>            logDataOfFdsMst         = elasticSearchService.getLogDataOfFdsMst( start,offset, reqParamMap, false);
+        ArrayList<HashMap<String,Object>> listOfDocumentsOfFdsMst = (ArrayList<HashMap<String,Object>>)logDataOfFdsMst.get("listOfDocumentsOfFdsMst");
+        
+        
+        
+        String       totalNumberOfDocuments = StringUtils.trimToEmpty((String)logDataOfFdsMst.get("totalNumberOfDocuments"));
+        PagingAction pagination             = new PagingAction("/servlet/nfds/search/search_for_state/list_of_search_results.fds", Integer.parseInt(pageNumberRequested), Integer.parseInt(totalNumberOfDocuments), Integer.parseInt(numberOfRowsPerPage), 5, "", "", "pagination");
+        long         responseTime           = (Long)logDataOfFdsMst.get("responseTime");
+        ModelAndView mav = new ModelAndView();
+        
+        
+        
+        mav.setViewName("scraping/search/search_for_state/list_of_search_results");
+        mav.addObject("totalNumberOfDocuments",  	totalNumberOfDocuments);
+        mav.addObject("listOfDocumentsOfFdsMst", 	listOfDocumentsOfFdsMst);
+        mav.addObject("currentPageNumber",       	pageNumberRequested);
+        mav.addObject("paginationHTML",          	pagination.getPagingHtml().toString());
+        mav.addObject("responseTime",            	responseTime);
+        mav.addObject("clusterSize",   			  	informationParam.size());
+        mav.addObject("serverInfo",   			 	informationParam.get(0).get("NODEINFO").toString());
+        mav.addObject("clusterName",   			  	informationParam.get(0).get("CLUSTERNAME").toString());
+        mav.addObject("searchAfter1",				reqParamMap.get("searchAfter1"));
+        mav.addObject("searchAfter2", 				reqParamMap.get("searchAfter2"));
+        if(informationParam.size() > 1){
+	        mav.addObject("fromDateTime",   		  reqParamMap.get("startDateFormatted") + " " + reqParamMap.get("startTimeFormatted")+ ".000");
+	        mav.addObject("toDateTime",   			  reqParamMap.get("endDateFormatted") + " " + reqParamMap.get("endTimeFormatted")+ ".999");
+	        mav.addObject("WK_DTM_0",   			  informationParam.get(0).get("WK_DTM").toString()			);
+	        mav.addObject("LSCHG_DTM_0",   			  informationParam.get(0).get("LSCHG_DTM").toString()		);
+	        mav.addObject("WK_DTM_1",   			  informationParam.get(1).get("WK_DTM").toString()			);
+	        mav.addObject("LSCHG_DTM_1",   			  informationParam.get(1).get("LSCHG_DTM").toString()		);
+	        
+	        Logger.debug("[ElasticSearchService][getLogDataOfFdsMst][EXECUTION][BEGIN][informationParam.size()] : {}", informationParam.get(0).get("WK_DTM").toString());
+	        Logger.debug("[ElasticSearchService][getLogDataOfFdsMst][EXECUTION][BEGIN][informationParam.size()] : {}", informationParam.get(0).get("LSCHG_DTM").toString());
+	        Logger.debug("[ElasticSearchService][getLogDataOfFdsMst][EXECUTION][BEGIN][informationParam.size()] : {}", informationParam.get(1).get("WK_DTM").toString());
+	        Logger.debug("[ElasticSearchService][getLogDataOfFdsMst][EXECUTION][BEGIN][informationParam.size()] : {}", informationParam.get(1).get("LSCHG_DTM").toString());
+	        
+        }
+        
+        Logger.debug("[SearchForStateController][METHOD : getListOfSearchResults][END]");
+        return mav;
+    }
+
+    
+    
+    /**
+     * FDS_MST log 상세조회 팝업처리
+     * @param reqParamMap
+     * @return
+     * @throws Exception
+     */
+    @RequestMapping("/servlet/nfds/search/search_for_state/show_logInfo_details.fds")
+    public ModelAndView showLogInfoDetails(@RequestParam Map<String,String> reqParamMap) throws Exception {
+        ModelAndView mav = new ModelAndView();
+        
+        String indexName = StringUtils.trimToEmpty(reqParamMap.get("indexName"));
+        String docType   = StringUtils.trimToEmpty(reqParamMap.get("docType"));
+        String docId     = StringUtils.trimToEmpty(reqParamMap.get("docId"));
+        String serverInfo     = StringUtils.trimToEmpty(reqParamMap.get("serverInfo"));
+        String clusterName     = StringUtils.trimToEmpty(reqParamMap.get("clusterName"));
+        if(!StringUtils.equals(serverInfo, "")){
+        	reqParamMap.put("pageName", "historySearch");
+        }
+        Logger.debug("[SearchForStateController][METHOD : showLogInfoDetails][indexName : {}]", indexName);
+        Logger.debug("[SearchForStateController][METHOD : showLogInfoDetails][docType   : {}]", docType);
+        Logger.debug("[SearchForStateController][METHOD : showLogInfoDetails][docId     : {}]", docId);
+        Logger.debug("[SearchForStateController][METHOD : showLogInfoDetails][serverInfo     : {}]", serverInfo);
+        Logger.debug("[SearchForStateController][METHOD : showLogInfoDetails][clusterName     : {}]", clusterName);
+        
+        HashMap<String,Object> logInfo = (HashMap<String,Object>)elasticSearchService.getDocumentAsMap(indexName, docId, reqParamMap);
+        
+        mav.addObject("logInfo", logInfo);
+        mav.setViewName("scraping/search/search_for_state/log_info_details");
+        
+        return mav;
+    }
+    
+    
+            
+} // end of class

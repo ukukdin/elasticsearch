@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding= "UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+ 
+<mapper namespace="nurier.scraping.setting.dao.SettingRuleDataManageSqlMapper">
+    
+    <select id="getRemoteBlackList" parameterType="remoteBlackVO" resultType="remoteBlackVO">
+        SELECT *
+        FROM NFDS_REMOTE_BLACKLIST
+    </select>
+    
+    <select id="getRemoteBlackInfo" parameterType="string" resultType="remoteBlackVO">
+        SELECT *
+        FROM NFDS_REMOTE_BLACKLIST
+        WHERE OID = #{oid}
+    </select>
+    
+    <insert id="setRemoteBlackInsert" parameterType="remoteBlackVO">
+        <selectKey resultType="String" keyProperty="oid" order="BEFORE">
+            SELECT NVL(MAX(OID),0)+1 as oid FROM NFDS_REMOTE_BLACKLIST
+        </selectKey>
+        INSERT INTO NFDS_REMOTE_BLACKLIST (
+            OID,
+            PGMNAM,
+            PROCESNAM,
+            LOCALPORT,
+            REMOTPORT,
+            REMARK,
+            CREATEDATE,
+            CREATEUSER
+        ) VALUES (
+            #{oid},
+            #{pgmnam},
+            #{procesnam},
+            #{localport},
+            #{remotport},
+            #{remark},
+            TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'),
+            #{createuser}
+        )
+    </insert>
+    
+    <update id="setRemoteBlackUpdate" parameterType="remoteBlackVO">
+        UPDATE NFDS_REMOTE_BLACKLIST
+            <!--   OID          = #{oid} -->
+        <set>
+            <if test="pgmnam != null and pgmnam != '' ">
+              PGMNAM            = #{pgmnam},
+            </if>
+            <if test="procesnam != null and procesnam != '' ">
+              PROCESNAM         = #{procesnam},
+            </if>
+            <if test="localport != null and localport != '' ">
+              LOCALPORT         = #{localport},
+            </if>
+            <if test="remotport != null and remotport != '' ">
+              REMOTPORT         = #{remotport},
+            </if>
+            <if test="remark != null">
+              REMARK            = #{remark}
+            </if>
+        </set>
+        WHERE OID = #{oid2}
+    </update>
+    
+    <delete id="setRemoteBlackDelete" parameterType="string">
+        DELETE FROM NFDS_REMOTE_BLACKLIST
+        WHERE OID = #{oid}
+    </delete>
+    
+</mapper>

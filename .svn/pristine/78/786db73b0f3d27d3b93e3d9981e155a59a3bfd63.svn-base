@@ -1,0 +1,302 @@
+package nurier.scraping.search.controller;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.ibatis.session.SqlSession;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.servlet.ModelAndView;
+
+import nurier.scraping.common.util.AuthenticationUtil;
+import nurier.scraping.common.util.DateUtil;
+import nurier.scraping.common.util.PagingAction;
+import nurier.scraping.elasticsearch.ElasticsearchService;
+import nurier.scraping.search.dao.SearchForTelegramSqlMapper;
+import nurier.scraping.search.service.SearchForTelegramService;
+import nurier.scraping.setting.dao.EsManagementSqlMapper;
+
+
+/**
+ * '전문원본검색' 관련 업무 처리용 Controller class
+ * ----------------------------------------------------------------------
+ * 날짜         작업자            수정내역
+ * 2014.07.16   scseo            신규생성
+ * ----------------------------------------------------------------------
+ */
+
+@Controller
+public class SearchForTelegramController {
+    private static final Logger Logger = LoggerFactory.getLogger(SearchForTelegramController.class);
+    
+    @Autowired
+    private ElasticsearchService      elasticSearchService;
+    
+    @Autowired
+    private SearchForTelegramService  searchForTelegramService;
+    
+    @Autowired
+    private SqlSession  sqlSession;
+    
+    
+    /**
+     * '전문원본검색' 페이지로 fowarding 처리 (2014.08.25 - scseo)
+     * @return
+     */
+    @RequestMapping("/servlet/nfds/search/search_for_telegram/search.fds")
+    public ModelAndView goToSearchForTelegram() throws Exception {
+        Logger.debug("[SearchForTelegramController][METHOD : goToSearchForTelegram][EXECUTION]");
+        
+        ArrayList<String> listOfDocumentTypeNames = (ArrayList<String>)searchForTelegramService.getListOfDocumentTypeNames();
+        
+        ModelAndView mav = new ModelAndView();
+        mav.setViewName("scraping/search/search_for_telegram/search.tiles");
+        mav.addObject("listOfDocumentTypeNames", listOfDocumentTypeNames);
+        
+        return mav;
+    }
+    
+    
+    /**
+     * '전문원본검색' 조회결과 리스트 반환처리 (2014.08.25 - scseo)
+     * @param reqParamMap
+     * @param documentTypeNames
+     * @return
+     * @throws Exception
+     */
+    @RequestMapping("/servlet/nfds/search/search_for_telegram/list_of_search_results.fds")
+    public ModelAndView getListOfSearchResults(@RequestParam Map<String,String> reqParamMap) throws Exception {
+        Logger.debug("[SearchForTelegramController][METHOD : getListOfSearchResults][EXECUTION]");
+        
+        String   documentTypeName  = StringUtils.trimToEmpty(reqParamMap.get("documentTypeName"));
+        String[] documentTypeNames = new String[]{documentTypeName};
+        
+        ////////////////////////////////////////////////////////////////////////////////////////////
+        String startDateFormatted = StringUtils.trimToEmpty(reqParamMap.get("startDateFormatted"));
+        String startTimeFormatted = StringUtils.trimToEmpty(reqParamMap.get("startTimeFormatted"));
+        String endDateFormatted   = StringUtils.trimToEmpty(reqParamMap.get("endDateFormatted"));
+        String endTimeFormatted   = StringUtils.trimToEmpty(reqParamMap.get("endTimeFormatted"));
+        String isAllFieldsSearch  = StringUtils.trimToEmpty(reqParamMap.get("isAllFieldsSearch"));
+        ////////////////////////////////////////////////////////////////////////////////////////////
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        Logger.debug("[SearchForTelegramController][METHOD : getListOfSearchResults][조회 시작일  ][startDateFormatted : {}]", startDateFormatted);
+        Logger.debug("[SearchForTelegramController][METHOD : getListOfSearchResults][조회 시작시간][startTimeFormatted : {}]", startTimeFormatted);
+        Logger.debug("[SearchForTelegramController][METHOD : getListOfSearchResults][조회 종료일  ][endDateFormatted   : {}]", endDateFormatted);
+        Logger.debug("[SearchForTelegramController][METHOD : getListOfSearchResults][조회 종료시간][endTimeFormatted   : {}]", endTimeFormatted);
+        Logger.debug("[SearchForTelegramController][METHOD : getListOfSearchResults][전체 필드검색][isAllFieldsSearch  : {}]", isAllFieldsSearch);
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+        EsManagementSqlMapper 			  sqlMapper 			  = sqlSession.getMapper(EsManagementSqlMapper.class);
+    	
+        HashMap<String,Object> param = new HashMap<String,Object>();
+        
+        String fromDateTime	 = DateUtil.getFormattedDateTimeHH24(reqParamMap.get("startDateFormatted"), reqParamMap.get("startTimeFormatted"));
+        String toDateTime	 = DateUtil.getFormattedDateTimeHH24(reqParamMap.get("endDateFormatted"), reqParamMap.get("endTimeFormatted"));
+        param.put("fromDateTime", 		fromDateTime.toString()									);
+        param.put("toDateTime", 		toDateTime.toString()									);
+        
+        ArrayList<HashMap<String, Object>> informationParam = sqlMapper.getList(param);
+        
+        Logger.debug("[ElasticSearchService][getLogDataOfFdsMst][EXECUTION][BEGIN][informationParam] : {}", 			informationParam);        
+        Logger.debug("[ElasticSearchService][getLogDataOfFdsMst][EXECUTION][BEGIN][fromDateTime] : {}", 				fromDateTime);        
+        Logger.debug("[ElasticSearchService][getLogDataOfFdsMst][EXECUTION][BEGIN][toDateTime] : {}", 					toDateTime);        
+        Logger.debug("[ElasticSearchService][getLogDataOfFdsMst][EXECUTION][BEGIN][informationParam.size()] : {}", 		informationParam.size());        
+        
+        // FDS_MST 기준으로 화면에 표시
+    	reqParamMap.put("serverInfo", 		informationParam.get(0).get("NODEINFO").toString()		);
+    	reqParamMap.put("clusterName", 		informationParam.get(0).get("CLUSTERNAME").toString()	);
+    	reqParamMap.put("pageName", 		"historySearch"											);
+        
+        String pageNumberRequested  = StringUtils.defaultIfBlank(reqParamMap.get("pageNumberRequested"), "1");
+        String numberOfRowsPerPage  = StringUtils.defaultIfBlank(reqParamMap.get("numberOfRowsPerPage"), "10");
+        int offset  = Integer.parseInt(numberOfRowsPerPage);
+        int start   = (Integer.parseInt(pageNumberRequested) - 1) * offset;
+        
+        
+        ModelAndView mav = new ModelAndView();
+        mav.setViewName("scraping/search/search_for_telegram/list_of_search_results");
+        
+        BoolQueryBuilder boolQuery = searchForTelegramService.getBoolQuery(StringUtils.trimToEmpty(reqParamMap.get("searchQuery")));
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        searchForTelegramService.getListOfOriginalTelegrams(mav, documentTypeNames, reqParamMap, boolQuery, start, offset);
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        
+        String totalNumberOfDocuments = String.valueOf(mav.getModelMap().get("totalNumberOfDocuments"));
+        
+        PagingAction pagination = new PagingAction("/servlet/nfds/search/search_for_telegram/list_of_search_results.fds", Integer.parseInt(pageNumberRequested), Integer.parseInt(totalNumberOfDocuments), Integer.parseInt(numberOfRowsPerPage), 5, "", "", "pagination");
+        mav.addObject("paginationHTML", pagination.getPagingHtml().toString());
+        mav.addObject("currentPageNumber",        pageNumberRequested);
+        mav.addObject("serverInfo",   			  informationParam.get(0).get("NODEINFO").toString());
+        mav.addObject("clusterName",   			  informationParam.get(0).get("CLUSTERNAME").toString());
+        mav.addObject("clusterSize",   			  informationParam.size());
+        if(informationParam.size() > 1){
+	        mav.addObject("fromDateTime",   		  reqParamMap.get("startDateFormatted") + " " + reqParamMap.get("startTimeFormatted"));
+	        mav.addObject("toDateTime",   			  reqParamMap.get("endDateFormatted") + " " + reqParamMap.get("endTimeFormatted"));
+	        mav.addObject("WK_DTM_0",   			  informationParam.get(0).get("WK_DTM").toString()			);
+	        mav.addObject("LSCHG_DTM_0",   			  informationParam.get(0).get("LSCHG_DTM").toString()		);
+	        mav.addObject("WK_DTM_1",   			  informationParam.get(1).get("WK_DTM").toString()			);
+	        mav.addObject("LSCHG_DTM_1",   			  informationParam.get(1).get("LSCHG_DTM").toString()		);
+	        
+	        Logger.debug("[ElasticSearchService][getLogDataOfFdsMst][EXECUTION][BEGIN][informationParam.size()] : {}", informationParam.get(0).get("WK_DTM").toString());
+	        Logger.debug("[ElasticSearchService][getLogDataOfFdsMst][EXECUTION][BEGIN][informationParam.size()] : {}", informationParam.get(0).get("LSCHG_DTM").toString());
+	        Logger.debug("[ElasticSearchService][getLogDataOfFdsMst][EXECUTION][BEGIN][informationParam.size()] : {}", informationParam.get(1).get("WK_DTM").toString());
+	        Logger.debug("[ElasticSearchService][getLogDataOfFdsMst][EXECUTION][BEGIN][informationParam.size()] : {}", informationParam.get(1).get("LSCHG_DTM").toString());
+	        
+        }
+        return mav;
+    }
+    
+    
+    /**
+     * 특정 document type 에 속한 모든 field 명들을 list 로 반환 (2014.09.01 - scseo)
+     * @return
+     * @throws Exception
+     */
+    @RequestMapping("/servlet/nfds/search/search_for_telegram/list_of_field_names_in_document_type.fds")
+    public ModelAndView getListOfFieldNamesInDocumentType(@RequestParam Map<String,String> reqParamMap) throws Exception {
+        Logger.debug("[SearchForTelegramController][METHOD : getListOfFieldNamesInDocumentType][EXECUTION]");
+        
+        ModelAndView mav = new ModelAndView();
+        mav.setViewName("scraping/search/search_for_telegram/list_of_field_names_in_document_type");
+        
+        return mav;
+    }
+    
+    
+    /**
+     * 검색쿼리를 히스토리에 등록하기 위한 modal 창 호출 처리 (scseo)
+     * @return
+     */
+    @RequestMapping("/servlet/nfds/search/search_for_telegram/dialog_for_saving_search_query.fds")
+    public String openDialogForSavingSearchQuery() {
+        Logger.debug("[SearchForTelegramController][METHOD : openDialogForSavingSearchQuery][EXECUTION]");
+        
+        return "scraping/search/search_for_telegram/dialog_for_saving_search_query";
+    }
+    
+    
+    /**
+     * 검색쿼리를  히스토리에 등록처리 (scseo)
+     * @param reqParamMap
+     * @return
+     */
+    @RequestMapping("/servlet/nfds/search/search_for_telegram/register_search_query_in_history.fds")
+    public @ResponseBody HashMap<String,String> registerSearchQueryInHistory(@RequestParam Map<String,String> reqParamMap) throws Exception {
+        
+        SearchForTelegramSqlMapper sqlMapper = sqlSession.getMapper(SearchForTelegramSqlMapper.class);
+        
+        String registrationDate = DateUtil.getCurrentDateTimeFormattedFourteenFigures();
+        String userId           = AuthenticationUtil.getUserId();
+        String searchQueryName  = StringUtils.trimToEmpty(reqParamMap.get("nameOfSearchQueryForRegistration"));
+        String searchQuery      = StringUtils.trimToEmpty(reqParamMap.get("searchQueryForRegistration"));
+        Logger.debug("[SearchForTelegramController][METHOD : registerSearchQueryInHistory][registrationDate : {}]", registrationDate);
+        Logger.debug("[SearchForTelegramController][METHOD : registerSearchQueryInHistory][userId           : {}]", userId);
+        Logger.debug("[SearchForTelegramController][METHOD : registerSearchQueryInHistory][searchQueryName  : {}]", searchQueryName);
+        Logger.debug("[SearchForTelegramController][METHOD : registerSearchQueryInHistory][searchQuery      : {}]", searchQuery);
+        
+        
+        HashMap<String,String> result = new HashMap<String,String>();
+        
+        try {
+            sqlMapper.registerSearchQueryInHistory(registrationDate, userId, searchQueryName, searchQuery);
+            result.put("execution_result", "success");
+        } catch(DataAccessException dataAccessException) {
+            result.put("execution_result", "fail");
+        } catch(Exception e) {
+            result.put("execution_result", "fail");
+        }
+        
+        return result;
+    }
+    
+    
+    /**
+     * 전문원본검색 '히스토리' modal 창 호출 처리
+     * @return
+     * @throws Exception
+     */
+    @RequestMapping("/servlet/nfds/search/search_for_telegram/dialog_for_search_query_history.fds")
+    public ModelAndView openDialogForSearchQueryHistory() throws Exception {
+        Logger.debug("[SearchForTelegramController][METHOD : openDialogForSearchQueryHistory][EXECUTION]");
+        
+        SearchForTelegramSqlMapper sqlMapper = sqlSession.getMapper(SearchForTelegramSqlMapper.class);
+        
+        ArrayList<HashMap<String,String>> listOfSearchQueryHistories = sqlMapper.getListOfSearchQueryHistories(AuthenticationUtil.getUserId());
+        
+        ModelAndView mav = new ModelAndView();
+        mav.setViewName("/scraping/search/search_for_telegram/dialog_for_search_query_history");
+        mav.addObject("listOfSearchQueryHistories", listOfSearchQueryHistories);
+        
+        return mav;
+    }
+    
+    
+    /**
+     * history 삭제처리 (scseo)
+     * @param reqParamMap
+     * @return
+     * @throws Exception
+     */
+    @RequestMapping("/servlet/nfds/search/search_for_telegram/delete_search_query_history.fds")
+    public @ResponseBody HashMap<String,String> deleteSearchQueryHistory(@RequestParam Map<String,String> reqParamMap) throws Exception {
+        Logger.debug("[SearchForTelegramController][METHOD : deleteSearchQueryHistory][EXECUTION]");
+        
+        String userId           = AuthenticationUtil.getUserId();
+        String registrationDate = StringUtils.trimToEmpty(reqParamMap.get("regDate"));
+        Logger.debug("[SearchForTelegramController][METHOD : deleteSearchQueryHistory][registrationDate : {}]", registrationDate);
+        
+        
+        SearchForTelegramSqlMapper sqlMapper = sqlSession.getMapper(SearchForTelegramSqlMapper.class);
+        
+        HashMap<String,String> result = new HashMap<String,String>();
+        try {
+            sqlMapper.deleteSearchQueryHistory(registrationDate, userId);
+            result.put("execution_result", "success");
+        } catch(DataAccessException dataAccessException) {
+            result.put("execution_result", "fail");
+        } catch(Exception exception) {
+            result.put("execution_result", "fail");
+        }
+        
+        return result;
+    }
+    
+    
+    /**
+     * log 상세조회 팝업처리 (scseo)
+     * @param reqParamMap
+     * @return
+     * @throws Exception
+     */
+    @RequestMapping("/servlet/nfds/search/search_for_telegram/show_logInfo_details.fds")
+    public ModelAndView showLogInfoDetails(@RequestParam Map<String,String> reqParamMap) throws Exception {
+        ModelAndView mav = new ModelAndView();
+        
+        String indexName = StringUtils.trimToEmpty(reqParamMap.get("indexName"));
+        String docType   = StringUtils.trimToEmpty(reqParamMap.get("docType"));
+        String docId     = StringUtils.trimToEmpty(reqParamMap.get("docId"));
+        Logger.debug("[SearchForTelegramController][METHOD : showLogInfoDetails][indexName : {}]", indexName);
+        Logger.debug("[SearchForTelegramController][METHOD : showLogInfoDetails][docType   : {}]", docType);
+        Logger.debug("[SearchForTelegramController][METHOD : showLogInfoDetails][docId     : {}]", docId);
+        reqParamMap.put("pageName", "historySearch");
+        HashMap<String,Object> logInfo = (HashMap<String,Object>)elasticSearchService.getDocumentAsMap(indexName, docId, reqParamMap);
+        
+        mav.addObject("logInfo", logInfo);
+        mav.setViewName("scraping/search/search_for_telegram/log_info_details");
+        
+        return mav;
+    }
+    
+} // end of class
+
+
+

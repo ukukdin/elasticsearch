@@ -1,0 +1,340 @@
+<?xml version="1.0" encoding= "UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+ 
+<mapper namespace="nurier.scraping.setting.dao.BlackInformationManagementSqlMapper">
+    
+    <!-- Black Information list 반환 - bhkim -->
+    <select id="getListOfBlackInformation" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        <include refid="paging.headerPagingStart"/>
+        SELECT
+            TO_CHAR(SEQ_NUM)   AS SEQ_NUM,
+            REGTYPE,
+            REGVALUE,
+            MODDATE,
+            IS_BLACKRGYN,
+            BLACKRGDATE,
+            INFORMATIONTYPE,
+            URGENCYLEVEL,
+            ACTIONTYPE,
+            TERMINALTYPE,
+            ORGANIZATIONCODE,
+            REFERENCESID,
+            DESCRIPTION,
+            SOURCE,
+            ORGANIZATIONTIME,
+            ORGANIZATIONNAME,
+            REMARK
+        FROM
+            NFDS_BLACK_INFORMATION
+        WHERE 1=1
+        <if test="REGTYPE != null and REGTYPE != '' ">
+            <![CDATA[
+            AND REGTYPE = #{REGTYPE}
+            ]]>
+        </if>
+        <if test="REGVALUE != null and REGVALUE != '' ">
+            <![CDATA[
+            AND UPPER(REGVALUE) LIKE UPPER(CONCAT('%',CONCAT(#{REGVALUE},'%')))
+            ]]>
+        </if>
+        <if test="RGSTARTDATE != null and RGSTARTDATE != '' ">
+            <![CDATA[
+            AND TO_NUMBER(MODDATE) >= TO_NUMBER(#{RGSTARTDATE})
+            ]]>
+        </if>
+        <if test="RGENDDATE != null and RGENDDATE != '' ">
+            <![CDATA[
+            AND TO_NUMBER(MODDATE) <= TO_NUMBER(#{RGENDDATE})
+            ]]>
+        </if>
+        <if test="IS_BLACKRGYN != null and IS_BLACKRGYN != '' and IS_BLACKRGYN != 'NONE' ">
+            <![CDATA[
+            AND IS_BLACKRGYN = #{IS_BLACKRGYN}
+            ]]>
+        </if>
+        <if test="IS_BLACKRGYN != null and IS_BLACKRGYN != '' and IS_BLACKRGYN == 'NONE' ">
+            <![CDATA[
+            AND (IS_BLACKRGYN = 'N' OR IS_BLACKRGYN IS NULL)
+            ]]>
+        </if>
+        <if test="BLACKRGDATE != null and BLACKRGDATE != '' ">
+            <![CDATA[
+            AND BLACKRGDATE LIKE CONCAT(#{BLACKRGDATE},'%')
+            ]]>
+        </if>
+        <if test="INFORMATIONTYPE != null and INFORMATIONTYPE != '' ">
+            <![CDATA[
+            AND INFORMATIONTYPE = #{INFORMATIONTYPE}
+            ]]>
+        </if>
+        <if test="URGENCYLEVEL != null and URGENCYLEVEL != '' ">
+            <![CDATA[
+            AND URGENCYLEVEL = #{URGENCYLEVEL}
+            ]]>
+        </if>
+        <if test="ACTIONTYPE != null and ACTIONTYPE != '' ">
+            <![CDATA[
+            AND ACTIONTYPE = #{ACTIONTYPE}
+            ]]>
+        </if>
+        <if test="TERMINALTYPE != null and TERMINALTYPE != '' ">
+            <![CDATA[
+            AND TERMINALTYPE = #{TERMINALTYPE}
+            ]]>
+        </if>
+        <if test="SOURCE != null and SOURCE != '' ">
+            <![CDATA[
+            AND SOURCE = #{SOURCE}
+            ]]>
+        </if>
+        AND IS_USED = 'Y'
+        ORDER BY
+        <if test="INFORMATIONTYPE != null and INFORMATIONTYPE != '' ">
+            INFORMATIONTYPE,
+        </if>
+        <if test="REGTYPE != null and REGTYPE != '' ">
+            REGTYPE,
+        </if>
+            RGDATE DESC, ORGANIZATIONTIME DESC
+        <include refid="paging.footerPagingEnd"/>
+    </select>
+    
+    
+    
+    
+    <select id="getBlackInformationOfSeq" parameterType="String" resultType="java.util.HashMap">
+        SELECT
+            TO_CHAR(SEQ_NUM)   AS SEQ_NUM,
+            REGTYPE,
+            REGVALUE,
+            RGDATE,
+            IS_BLACKRGYN,
+            BLACKRGDATE,
+            INFORMATIONTYPE,
+            URGENCYLEVEL,
+            ACTIONTYPE,
+            TERMINALTYPE,
+            ORGANIZATIONCODE,
+            REFERENCESID,
+            DESCRIPTION,
+            SOURCE,
+            ORGANIZATIONTIME,
+            ORGANIZATIONNAME,
+            REMARK
+        FROM
+            NFDS_BLACK_INFORMATION
+        WHERE SEQ_NUM = #{SEQ_NUM}
+    </select>
+    
+    
+    <update id="setBlackInfoShareDate" parameterType="java.util.HashMap">
+        UPDATE NFDS_BLACK_INFORMATION SET
+              IS_BLACKRGYN    = #{IS_BLACKRGYN}
+            , BLACKRGDATE     = TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS')
+            , MODDATE         = TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS')
+            , MODNAME         = #{MODNAME}
+        WHERE SEQ_NUM = #{SEQ_NUM}
+    </update>
+    
+    
+    <!-- Black information 신규등록처리 -->
+    <insert id="registerBlackInformation" parameterType="java.util.HashMap">
+    
+        <![CDATA[
+        INSERT INTO NFDS_BLACK_INFORMATION (
+            SEQ_NUM,
+            SOURCE,
+            REGTYPE,
+            REGVALUE,
+            BLACKRGDATE,
+            IS_BLACKRGYN,
+            INFORMATIONTYPE,
+            URGENCYLEVEL,
+            ACTIONTYPE,
+            TERMINALTYPE,
+            ORGANIZATIONCODE,
+            REFERENCESID,
+            DESCRIPTION,
+            IS_USED,
+            RGNAME,
+            RGDATE,
+            MODNAME,
+            MODDATE,
+            ORGANIZATIONTIME,
+            ORGANIZATIONNAME,
+            REMARK
+        ) VALUES (
+            TO_NUMBER(#{FISS_SEQ_NUM}),
+            #{SOURCE},
+            #{REGTYPE},
+            #{REGVALUE},
+            TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'),
+            #{IS_BLACKRGYN},
+            #{INFORMATIONTYPE},
+            #{URGENCYLEVEL},
+            #{ACTIONTYPE},
+            #{TERMINALTYPE},
+            #{ORGANIZATIONCODE},
+            #{IDENTIFICATIONTYPE},
+            #{DESCRIPTION},
+            #{IS_USED},
+            #{MODNAME},
+            TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'),
+            #{MODNAME},
+            TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'),
+            #{ORGANIZATIONTIME},
+            #{ORGANIZATIONNAME},
+            #{REMARK}
+        )
+        ]]>
+    </insert>
+    
+    
+    <!-- fiss에서 가져온 데이터 Black information 신규등록처리 -->
+    <insert id="fissRegisterBlackInformation" parameterType="java.util.HashMap">
+    
+        <selectKey resultType="String" keyProperty="seq_num" order="BEFORE">
+            SELECT NVL(MAX(SEQ_NUM),0)+1 as seq_num FROM NFDS_BLACK_INFORMATION
+        </selectKey>
+    
+        <![CDATA[
+        INSERT INTO NFDS_BLACK_INFORMATION (
+            SEQ_NUM,
+            SOURCE,
+            REGTYPE,
+            REGVALUE,
+            INFORMATIONTYPE,
+            URGENCYLEVEL,
+            ACTIONTYPE,
+            TERMINALTYPE,
+            ORGANIZATIONCODE,
+            REFERENCESID,
+            DESCRIPTION,
+            IS_USED,
+            RGNAME,
+            RGDATE,
+            MODNAME,
+            MODDATE,
+            ORGANIZATIONTIME,
+            ORGANIZATIONNAME,
+            REMARK
+        ) VALUES (
+            #{seq_num},
+            #{SOURCE},
+            #{REGTYPE},
+            #{REGVALUE},
+            #{INFORMATIONTYPE},
+            #{URGENCYLEVEL},
+            #{ACTIONTYPE},
+            #{TERMINALTYPE},
+            #{ORGANIZATIONCODE},
+            #{IDENTIFICATIONTYPE},
+            #{DESCRIPTION},
+            #{IS_USED},
+            #{RGNAME},
+            TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'),
+            #{RGNAME},
+            TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'),
+            #{ORGANIZATIONTIME},
+            #{ORGANIZATIONNAME},
+            #{REMARK}
+        )
+        ]]>
+    </insert>
+    
+    
+    <!-- 중복데이터 check -->
+    <select id="getDuplicationDataCnt" parameterType="java.util.HashMap" resultType="String">
+        SELECT TO_CHAR(COUNT(1)) AS DATACNT FROM NFDS_BLACK_INFORMATION
+        WHERE REGTYPE = #{REGTYPE}
+        AND REGVALUE = TRIM(#{REGVALUE})
+        <if test="BEHAVIOR != 'REGISTRATION' ">
+            <![CDATA[
+            AND ORGANIZATIONTIME >= TRIM(#{ORGANIZATIONTIME})
+            ]]>
+        </if>
+        AND IS_USED = 'Y'
+    </select>
+    
+    
+    <select id="getShareNumber" parameterType="java.util.HashMap" resultType="String">
+        SELECT
+            TO_CHAR(SEQ_NUM)   AS SEQ_NUM
+        FROM
+            NFDS_BLACK_USER
+        WHERE FISS_SEQ_NUM = #{SEQ_NUM}
+    </select>
+    
+    
+    <select id="getNextFissSeq" resultType="String">
+        SELECT TO_CHAR(NVL(MAX(SEQ_NUM),0)+1) as FISS_SEQ_NUM FROM NFDS_BLACK_INFORMATION
+    </select>
+    
+    
+    <!-- fiss 공유후 기존 list 미사용처리 -->
+    <update id="editBlackInfoUseN" parameterType="java.util.HashMap">
+        <![CDATA[
+        UPDATE
+            NFDS_BLACK_INFORMATION
+        SET
+            IS_USED         = 'N',
+            DESCRIPTION     = #{CHANGE_DESCRIPTION},
+            MODDATE         = TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'),
+            MODNAME         = #{MODNAME}
+        WHERE
+            SEQ_NUM         = #{SEQ_NUM}
+        ]]>
+    </update>
+    
+    <!-- 기존 데이터 SEQ_NUM 가져오기 -->
+    <select id="getBlackInformationOfValue" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+              TO_CHAR(SEQ_NUM)   AS SEQ_NUM
+            , SOURCE
+            , REGTYPE
+            , REGVALUE
+            , URGENCYLEVEL
+            , DESCRIPTION
+            , REMARK
+            , ORGANIZATIONNAME
+            , ORGANIZATIONTIME
+            , RGNAME
+            , RGDATE
+        FROM
+            NFDS_BLACK_INFORMATION
+        WHERE 1=1 
+            AND IS_USED = 'Y'
+            AND REGTYPE = #{REGTYPE}
+            AND REGVALUE = TRIM(#{REGVALUE})
+    </select>
+
+    <!-- 기존 데이터 변경 처리 -->
+    <update id="updateBlackInformation" parameterType="java.util.HashMap">
+        <![CDATA[
+        UPDATE
+            NFDS_BLACK_INFORMATION
+        SET
+        ]]>
+            <if test="REGVALUE != null and REGVALUE != '' ">
+                <![CDATA[
+                INFORMATIONTYPE  = #{INFORMATIONTYPE},
+                URGENCYLEVEL     = #{URGENCYLEVEL},
+                ACTIONTYPE       = #{ACTIONTYPE},
+                TERMINALTYPE     = #{TERMINALTYPE},
+                REFERENCESID     = #{IDENTIFICATIONTYPE},
+                DESCRIPTION      = #{DESCRIPTION},
+                IS_USED          = #{IS_USED},
+                REMARK           = #{REMARK},
+                ]]>
+            </if>
+            <![CDATA[            
+            IS_BLACKRGYN     = #{IS_BLACKRGYN},
+            BLACKRGDATE      = #{BLACKRGDATE},
+            MODDATE          = TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'),
+            MODNAME          = #{MODNAME}
+        WHERE 
+            SEQ_NUM = #{SEQ_NUM}
+        ]]>
+    </update>
+    
+</mapper>

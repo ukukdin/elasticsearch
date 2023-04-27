@@ -1,0 +1,462 @@
+package Jeonmoon;
+
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.UUID;
+
+import org.apache.http.HttpHost;
+import org.elasticsearch.action.ActionListener;
+import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateRequest;
+import org.elasticsearch.action.index.IndexRequest;
+import org.elasticsearch.action.index.IndexResponse;
+import org.elasticsearch.action.search.MultiSearchRequest;
+import org.elasticsearch.action.search.MultiSearchResponse;
+import org.elasticsearch.action.search.SearchRequest;
+import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.action.search.SearchType;
+import org.elasticsearch.action.search.MultiSearchResponse.Item;
+import org.elasticsearch.action.support.WriteRequest;
+import org.elasticsearch.action.support.master.AcknowledgedResponse;
+import org.elasticsearch.client.RequestOptions;
+import org.elasticsearch.client.RestClient;
+import org.elasticsearch.client.RestClientBuilder;
+import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.unit.TimeValue;
+import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.common.xcontent.XContentFactory;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.SearchHits;
+import org.elasticsearch.search.builder.SearchSourceBuilder;
+import org.json.HTTP;
+
+import nurier.scraping.common.constant.CommonConstants;
+import nurier.scraping.common.constant.FdsMessageFieldNames;
+
+public class ApplicationMain {
+	static SimpleDateFormat df = new SimpleDateFormat("yyyy.MM.dd");
+	static Date now1 = new Date();
+	static String logDateTime = df.format(now1);
+	static String IndexName = "nacf_" + logDateTime;
+	private static int digit = 6;
+	private static DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+	private static LocalDateTime now = LocalDateTime.now();
+
+	public static void main(String[] args) throws Exception {
+		// 연결 구문
+		ArrayList<String> ipList = new ArrayList<String>();
+		ArrayList<Integer> portList = new ArrayList<Integer>();
+		ipList.add("192.168.0.43");
+		ipList.add("192.168.0.46");
+		portList.add(9203);
+		portList.add(9210);
+		portList.add(9210);
+
+		ElasticsearchService es = new ElasticsearchService(ipList, portList);
+		es.inspectionLog();
+		es.callcenterComment();
+		es.callcenterlog();
+		
+		//벌크란?<여러건의 다량 데이터를 한번에 넣어주는 API>
+//		bulk(es, IndexName);
+
+		/*루프를 이용해서 데이터를 1개씩 인덱스로 넣는 코드 
+		 * int loop = 1000; for(int i=0;i<loop;i++){ insertRequest(es, IndexName);
+		 * Thread.sleep(1000);
+		 * 
+		 */
+		
+		 }
+		// 2개의 클러스터 를 검색할때 사용하는 코드
+//		RestHighLevelClient client = new RestHighLevelClient(RestClient
+//				.builder(new HttpHost("192.168.0.43", 9210, "http"), new HttpHost("192.168.0.46", 9210, "http")));
+//		HashMap<String, Object> hmDocument = null;
+//		MultiSearchRequest requests = new MultiSearchRequest();
+//
+//		SearchRequest searchRequest = new SearchRequest("cluster_remote_1:nacf_2023.02.27");
+//		SearchRequest searchRequest2 = new SearchRequest("nacf_2023.02.27");
+//
+//		SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+//		SearchSourceBuilder searchSourceBuilder2 = new SearchSourceBuilder();
+//		searchSourceBuilder.query(QueryBuilders.matchQuery("E_FNC_CUSNO", "CUSNO641"));
+//		searchSourceBuilder2.query(QueryBuilders.matchQuery("E_FNC_CUSNO", "CUSNO641"));
+//		searchRequest.source(searchSourceBuilder);
+//		searchRequest2.source(searchSourceBuilder2);
+//		System.out.println(searchSourceBuilder);
+//		System.out.println(searchSourceBuilder2);
+//		requests.add(searchRequest);
+//		requests.add(searchRequest2);
+//
+//		MultiSearchResponse searchResponse = client.msearch(requests, RequestOptions.DEFAULT);
+//		List<Map<String, Object>> arrList = new ArrayList<>();
+//
+//		for (Item i : searchResponse.getResponses()) {
+//
+//			for (SearchHit s : i.getResponse().getHits().getHits()) {
+//				Map<String, Object> sourceMap = s.getSourceAsMap();
+//				// System.out.println(sourceMap);
+//
+//				System.out.println(sourceMap.get("E_FNC_CUSNO"));
+//			}
+//			System.out.println(i.getResponse().getHits().getTotalHits());
+//		}
+//	}
+
+	
+	/* 인덱스를 생성하여 데이터를 한개씩 넣는 코드
+	 * */
+	public static void insertRequest(ElasticsearchService es, String indexName) throws Exception {
+		IndexRequest request = es.getIndexRequest(indexName, message());
+		// putTemplate_MessageResponse(es);
+		request.timeout(TimeValue.timeValueMillis(300));
+		request.setRefreshPolicy(WriteRequest.RefreshPolicy.WAIT_UNTIL);
+		request.setRefreshPolicy("wait_for");
+		final RestHighLevelClient client = es.getClient();
+		ActionListener<IndexResponse> listener = new ActionListener<IndexResponse>() {
+
+			public void onResponse(IndexResponse response) {
+				try {
+					if (client != null)
+						client.close();
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+
+			public void onFailure(Exception exception) {
+				try {
+					exception.printStackTrace();
+					if (client != null)
+						client.close();
+				} catch (Exception ef) {
+					ef.printStackTrace();
+				}
+			}
+		};
+		// index request에 대해 비동기 호출
+		client.indexAsync(request, RequestOptions.DEFAULT, listener);
+
+	}
+
+	// 70만개의 데이터를 벌크 형태로 넣는 코드입니다.
+	public static void bulk(ElasticsearchService es, String indexName) throws Exception {
+		// putTemplate_messageResponse는 엘라스틱서치 인덱스의 값들의 필드를 설정하여서 기본구문으로 넣는 형태입니다. 
+		putTemplate_MessageResponse(es);
+		int loop = 700000;
+		ArrayList<IndexRequest> req = new ArrayList<IndexRequest>();
+		int total = 0;
+		for (int i = 0; i < loop; i++) {
+			Map<String, Object> map = message();
+			IndexRequest indexReq = es.getIndexRequest(indexName, map);
+			req.add(indexReq);
+			// 2000개씩 한번에 넣는 코드입니다. 
+			if ((i + 1) % 2000 == 0) {
+				es.bulkRequest(req, 300);
+//    				System.out.println(i+1 + " bulk �셿猷�");
+//    				System.out.println("size : "+req.size());
+				total += req.size();
+				req.clear();
+				Thread.sleep(2000);
+			}
+		}
+		System.out.println("total : " + total);
+	}
+
+	/*
+	 * fds에서는 message 와 response라는 인덱스가 별도로 존재했지만 현재 하나의 인덱스로 합쳐서 2개의 값을 넣는 형태입니다.
+	 * 자동생성하여서 만들어줍니다. 
+	 */ 
+	public static Map<String, Object> message() {
+		SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+		SimpleDateFormat df1 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		String logID = UUID.randomUUID().toString();
+		Date now = new Date();
+		String logDateTime = df.format(now);
+		String logDateTime1 = df1.format(now);
+		String receiveNanoTime = Long.toString(System.nanoTime());
+		Map<String, Object> map = new HashMap<String, Object>();
+
+		List<Object> list = new ArrayList<>();
+		map.put(MessageType.FIELDS[0][0], logDateTime);
+		map.put("response", list);
+
+		for (int j = 1; j < MessageType.FIELDS.length; j++) {
+			if (MessageType.FIELDS[j][0].equals("Amount") || MessageType.FIELDS[j][0].equals("IO_EA_RMT_FEE1")
+					|| MessageType.FIELDS[j][0].equals("totalScore")
+					|| MessageType.FIELDS[j][0].equals("IO_EA_DD1_FTR_LMT3")
+					|| MessageType.FIELDS[j][0].equals("IO_EA_TM1_FTR_LMT3")
+					|| MessageType.FIELDS[j][0].equals("sm_3g_ip") || MessageType.FIELDS[j][0].equals("score")) {
+				map.put(MessageType.FIELDS[j][0], rand.nextInt(1000));
+			} else if (MessageType.FIELDS[j][0].equals("E_FNC_USRID")) {
+				map.put(MessageType.FIELDS[j][0], "TESTUSER" + rand.nextInt(10000));
+
+			} else if (MessageType.FIELDS[j][0].equals("securityMediaType")) {
+				map.put(MessageType.FIELDS[j][0], securityMediaType[rand.nextInt(securityMediaType.length)]);
+			} else if (MessageType.FIELDS[j][0].equals("RMS_SVC_C")) {
+				map.put(MessageType.FIELDS[j][0], RMS_SVC_C[rand.nextInt(RMS_SVC_C.length)]);
+			} else if (MessageType.FIELDS[j][0].equals("blockingType")) {
+				map.put(MessageType.FIELDS[j][0], blockingType[rand.nextInt(blockingType.length)]);
+			} else if (MessageType.FIELDS[j][0].equals("responseCode")) {
+				map.put(MessageType.FIELDS[j][0], String.valueOf(rand.nextInt(3)));
+			} else if (MessageType.FIELDS[j][0].equals("isCertified")) {
+				map.put(MessageType.FIELDS[j][0], yNType[rand.nextInt(yNType.length)]);
+			} else if (MessageType.FIELDS[j][0].equals("EBNK_MED_DSC")) {
+				map.put(MessageType.FIELDS[j][0], EBNK_MED_DSC[rand.nextInt(EBNK_MED_DSC.length)]);
+			} else if (MessageType.FIELDS[j][0].equals("country")) {
+				map.put(MessageType.FIELDS[j][0], country[rand.nextInt(country.length)]);
+			} else if (MessageType.FIELDS[j][0].equals("workGbn")) {
+				map.put(MessageType.FIELDS[j][0], workGbn[rand.nextInt(workGbn.length)]);
+			} else if (MessageType.FIELDS[j][0].equals("processState")) {
+				map.put(MessageType.FIELDS[j][0], processS[rand.nextInt(processS.length)]);
+			} else if (MessageType.FIELDS[j][0].equals("EXE_YN")) {
+				map.put(MessageType.FIELDS[j][0], yNType[rand.nextInt(yNType.length)]);
+			} else if (MessageType.FIELDS[j][0].equals("IO_EA_PW_CD_DS3")) {
+				map.put(MessageType.FIELDS[j][0], yNType[rand.nextInt(yNType.length)]);
+			} else if (MessageType.FIELDS[j][0].equals("SMS_AUTHEN_YN")) {
+				map.put(MessageType.FIELDS[j][0], yNType[rand.nextInt(yNType.length)]);
+			} else if (MessageType.FIELDS[j][0].equals("PRE_ASSIGN_YN")) {
+				map.put(MessageType.FIELDS[j][0], yNType[rand.nextInt(yNType.length)]);
+			} else if (MessageType.FIELDS[j][0].equals("EXCEPTION_ADD_AUTHEN_YN")) {
+				map.put(MessageType.FIELDS[j][0], yNType[rand.nextInt(yNType.length)]);
+			} else if (MessageType.FIELDS[j][0].equals("EXCEPT_REGIST")) {
+				map.put(MessageType.FIELDS[j][0], yNType[rand.nextInt(yNType.length)]);
+			} else if (MessageType.FIELDS[j][0].equals("RV_AC_DGN_YN2")) {
+				map.put(MessageType.FIELDS[j][0], yNType[rand.nextInt(yNType.length)]);
+			} else if (MessageType.FIELDS[j][0].equals("pc_isProxy")) {
+				map.put(MessageType.FIELDS[j][0], yNType[rand.nextInt(yNType.length)]);
+			} else if (MessageType.FIELDS[j][0].equals("pc_isWinFirewall")) {
+				map.put(MessageType.FIELDS[j][0], yNType[rand.nextInt(yNType.length)]);
+			} else if (MessageType.FIELDS[j][0].equals("pc_isAutoPatch")) {
+				map.put(MessageType.FIELDS[j][0], yNType[rand.nextInt(yNType.length)]);
+			} else if (MessageType.FIELDS[j][0].equals("pc_isWinDefender")) {
+				map.put(MessageType.FIELDS[j][0], yNType[rand.nextInt(yNType.length)]);
+			} else if (MessageType.FIELDS[j][0].equals("sm_jailBreak")) {
+				map.put(MessageType.FIELDS[j][0], yNType[rand.nextInt(yNType.length)]);
+			} else if (MessageType.FIELDS[j][0].equals("sm_roaming")) {
+				map.put(MessageType.FIELDS[j][0], yNType[rand.nextInt(yNType.length)]);
+			} else if (MessageType.FIELDS[j][0].equals("isIdentified")) {
+				map.put(MessageType.FIELDS[j][0], yNType[rand.nextInt(yNType.length)]);
+			} else if (MessageType.FIELDS[j][0].equals("isCertified")) {
+				map.put(MessageType.FIELDS[j][0], yNType[rand.nextInt(yNType.length)]);
+			} else if (MessageType.FIELDS[j][0].equals("hasReleaseDateTime")) {
+				map.put(MessageType.FIELDS[j][0], yNType[rand.nextInt(yNType.length)]);
+			} else if (MessageType.FIELDS[j][0].equals("sm_mobileAPSsid")) {
+				map.put(MessageType.FIELDS[j][0], mobileCompanyName[rand.nextInt(mobileCompanyName.length)]);
+			} else if (MessageType.FIELDS[j][0].equals("IO_EA_DPZ_PL_IMP_BAC")) {
+				map.put(MessageType.FIELDS[j][0], rand.nextInt(10000));
+			} else {
+				map.put(MessageType.FIELDS[j][0], MessageType.FIELDS[j][1] + rand.nextInt(1000));
+			}
+		}
+		for (int k = 0; k < 1; k++) {
+			Map<String, Object> map2 = new HashMap<String, Object>();
+			map2.put(MessageType.RES_FIELDS[0][0], logDateTime1);
+			for (int i = 0; i < MessageType.RES_FIELDS.length; i++) {
+				if (MessageType.RES_FIELDS[i][0].equals("userId")) {
+					map2.put(MessageType.RES_FIELDS[i][0], "TESTUSER" + rand.nextInt(10000));
+				} else if (MessageType.RES_FIELDS[i][0].equals("detectDateTime")) {
+					map2.put(MessageType.RES_FIELDS[i][0], logDateTime1);
+				} else if (MessageType.RES_FIELDS[i][0].equals("detectNanoTime")) {
+					map2.put(MessageType.RES_FIELDS[i][0], "dectectNanoTime" + rand.nextInt(100));
+				} else if (MessageType.RES_FIELDS[i][0].equals("ruleType")) {
+					map2.put(MessageType.RES_FIELDS[i][0], "ruleType" + rand.nextInt(1000));
+				} else if (MessageType.RES_FIELDS[i][0].equals("logid")) {
+					map2.put(MessageType.RES_FIELDS[i][0], "logid" + rand.nextInt(10000));
+				} else if (MessageType.RES_FIELDS[i][0].equals("ruleGroupName")) {
+					map2.put(MessageType.RES_FIELDS[i][0], "ruleGroupName" + rand.nextInt(10000));
+				} else if (MessageType.RES_FIELDS[i][0].equals("ruleName")) {
+					map2.put(MessageType.RES_FIELDS[i][0], ruleName[rand.nextInt(ruleName.length)]);
+				} else if (MessageType.RES_FIELDS[i][0].equals("score")) {
+					map2.put(MessageType.RES_FIELDS[i][0], rand.nextInt(1000));
+				} else if (MessageType.RES_FIELDS[i][0].equals("ruleDetail")) {
+					map2.put(MessageType.RES_FIELDS[i][0], rand.nextInt(10000));
+				} else if (MessageType.RES_FIELDS[i][0].equals("blockingType")) {
+					map2.put(MessageType.RES_FIELDS[i][0], blockingType[rand.nextInt(blockingType.length)]);
+				} else if (MessageType.RES_FIELDS[i][0].equals("EBNK_MED_DSC")) {
+					map2.put(MessageType.RES_FIELDS[i][0], EBNK_MED_DSC[rand.nextInt(EBNK_MED_DSC.length)]);
+				} else if (MessageType.RES_FIELDS[i][0].equals("ruleId")) {
+					map2.put(MessageType.RES_FIELDS[i][0], ruleID[rand.nextInt(ruleID.length)]);
+				} else if (MessageType.RES_FIELDS[i][0].equals("detailLog")) {
+					map2.put(MessageType.RES_FIELDS[i][0], null);
+				}
+			}
+			list.add(map2);
+
+		}
+		return map;
+	}
+
+	/*
+	 * 엘라스틱서치 7에서는 기본으로 인덱스의 샤드와 레플리카가 1로 지정되어있고 자동 매핑 형태이기때문에 검색하는데 문제가 생길수 있기때문에
+	 * 샤드/ 레플리카 개수를 지정해주고
+	 * 필드타입을 지정해줍니다. (예시로 쉽게 설명하자만 String,Integer 인지의 대한 타입을 미리 지정해주면 거기에 맞춰서 작동이 됩니다. 
+	 * 
+	 */
+	public static boolean putTemplate_MessageResponse(ElasticsearchService es) throws IOException {
+		PutIndexTemplateRequest request = new PutIndexTemplateRequest("nacf");
+		request.settings(Settings.builder().put("index.number_of_shards", 3).put("index.number_of_replicas", 1)
+				.put("refresh_interval", "5s") // refresh_interval 을 5초가 적당합니다. 10초 이상으로 해놓을경우 디스크 I/O 가 발생할 수 있습니다.
+												
+		);
+		List<String> list = new ArrayList<String>();
+		list.add("nacf*");
+		request.patterns(list);
+
+		XContentBuilder indexBuilder = XContentFactory.jsonBuilder();
+		indexBuilder.startObject().startObject("properties").startObject("TR_DTM").field("type", "date")
+				.field("format", "yyyy-MM-dd HH:mm:ss.SSS").endObject().startObject("NAAC_DSC").field("type", "keyword")
+				.endObject().startObject("EBNK_MED_DSC").field("type", "keyword").endObject().startObject("E_FNC_CUSNO")
+				.field("type", "keyword").endObject().startObject("E_FNC_USRID").field("type", "keyword").endObject()
+				.startObject("E_FNC_COPR_ID").field("type", "keyword").endObject().startObject("COPR_DS")
+				.field("type", "keyword").endObject().startObject("LANG_DS").field("type", "keyword").endObject()
+				.startObject("E_FNC_USR_OS_DSC").field("type", "keyword").endObject().startObject("E_FNC_USR_TELNO")
+				.field("type", "keyword").endObject().startObject("E_FNC_USR_IPADR").field("type", "keyword")
+				.endObject().startObject("E_FNC_LGIN_DSC").field("type", "keyword").endObject()
+				.startObject("E_FNC_TR_ACNO").field("type", "keyword").endObject().startObject("RMS_SVC_C")
+				.field("type", "keyword").endObject().startObject("INQ_CND_CLF_ID").field("type", "keyword").endObject()
+				.startObject("INQ_CND_VAL").field("type", "keyword").endObject().startObject("E_FNC_USR_DVIC_INF_CNTN")
+				.field("type", "keyword").endObject().startObject("E_FNC_USR_ACS_DSC").field("type", "keyword")
+				.endObject().startObject("E_FNC_MED_SVCID").field("type", "keyword").endObject()
+				.startObject("E_FNC_MED_SVRNM").field("type", "keyword").endObject().startObject("E_FNC_RSP_C")
+				.field("type", "keyword").endObject().startObject("EXE_YN").field("type", "keyword").endObject()
+				.startObject("STD_GBL_ID").field("type", "keyword").endObject().startObject("TRANSFER_ACNO")
+				.field("type", "keyword").endObject().startObject("CST_NAM").field("type", "keyword").endObject()
+				.startObject("score").field("type", "integer").endObject().startObject("COMMON_PUBLIC_IP")
+				.field("type", "keyword").endObject().startObject("COMMON_PUBLIC_IP_WAS").field("type", "keyword")
+				.endObject().startObject("E_FNC_TR_ACNO_C").field("type", "keyword").endObject()
+				.startObject("IO_EA_PW_CD_DS1").field("type", "keyword").endObject().startObject("IO_EA_PW_CD_DS2")
+				.field("type", "keyword").endObject().startObject("IO_EA_PW_CD_DS3").field("type", "keyword")
+				.endObject().startObject("SMS_AUTHEN_YN").field("type", "keyword").endObject()
+				.startObject("PRE_ASSIGN_YN").field("type", "keyword").endObject()
+				.startObject("EXCEPTION_ADD_AUTHEN_YN").field("type", "keyword").endObject()
+				.startObject("EXCEPT_REGIST").field("type", "keyword").endObject().startObject("SMART_AUTHEN_YN")
+				.field("type", "keyword").endObject().startObject("ATTC_DS").field("type", "keyword").endObject()
+				.startObject("CHRR_TELNO").field("type", "keyword").endObject().startObject("CHRR_TELNO1")
+				.field("type", "keyword").endObject().startObject("RG_TELNO").field("type", "keyword").endObject()
+				.startObject("LS_FTR_TRDT").field("type", "keyword").endObject().startObject("FTR_DS2")
+				.field("type", "keyword").endObject().startObject("LS_TRDT").field("type", "keyword").endObject()
+				.startObject("RV_AC_DGN_YN2").field("type", "keyword").endObject().startObject("IO_EA_DRW_AC_NAME1")
+				.field("type", "keyword").endObject().startObject("IO_EA_RV_ACTNM1").field("type", "keyword")
+				.endObject().startObject("IO_EA_DD1_FTR_LMT3").field("type", "integer").endObject()
+				.startObject("IO_EA_TM1_FTR_LMT3").field("type", "integer").endObject()
+				.startObject("IO_EA_DPZ_PL_IMP_BAC").field("type", "keyword").endObject().startObject("IO_EA_TOT_BAC6")
+				.field("type", "keyword").endObject().startObject("pc_publicIP1").field("type", "keyword").endObject()
+				.startObject("pc_publicIP2").field("type", "keyword").endObject().startObject("pc_publicIP3")
+				.field("type", "keyword").endObject().startObject("pc_privateIP1").field("type", "keyword").endObject()
+				.startObject("pc_privateIP2").field("type", "keyword").endObject().startObject("pc_privateIP3")
+				.field("type", "keyword").endObject().startObject("pc_isProxy").field("type", "keyword").endObject()
+				.startObject("pc_proxyIP1").field("type", "keyword").endObject().startObject("pc_proxyIP2")
+				.field("type", "keyword").endObject().startObject("pc_isVpn").field("type", "keyword").endObject()
+				.startObject("pc_vpnIP1").field("type", "keyword").endObject().startObject("pc_vpnIP2")
+				.field("type", "keyword").endObject().startObject("pc_macAddr1").field("type", "keyword").endObject()
+				.startObject("pc_macAddr2").field("type", "keyword").endObject().startObject("pc_macAddr3")
+				.field("type", "keyword").endObject().startObject("pc_logicalMac1").field("type", "keyword").endObject()
+				.startObject("pc_logicalMac2").field("type", "keyword").endObject().startObject("pc_logicalMac3")
+				.field("type", "keyword").endObject().startObject("pc_hddSerial1").field("type", "keyword").endObject()
+				.startObject("pc_hddSerial2").field("type", "keyword").endObject().startObject("pc_hddSerial3")
+				.field("type", "keyword").endObject().startObject("pc_cpuID").field("type", "keyword").endObject()
+				.startObject("pc_mbSn").field("type", "keyword").endObject().startObject("pc_winVer")
+				.field("type", "keyword").endObject().startObject("pc_isVm").field("type", "keyword").endObject()
+				.startObject("pc_vmName").field("type", "keyword").endObject().startObject("Amount")
+				.field("type", "integer").endObject().startObject("pc_gatewayMac").field("type", "keyword").endObject()
+				.startObject("pc_gatewayIP").field("type", "keyword").endObject().startObject("pc_volumeID")
+				.field("type", "keyword").endObject().startObject("pc_remoteInfo1").field("type", "keyword").endObject()
+				.startObject("pc_remoteInfo2").field("type", "keyword").endObject().startObject("pc_remoteInfo3")
+				.field("type", "keyword").endObject().startObject("pc_remoteInfo4").field("type", "keyword").endObject()
+				.startObject("pc_remoteInfo5").field("type", "keyword").endObject().startObject("pc_remoteInfo6")
+				.field("type", "keyword").endObject().startObject("pc_remoteInfo7").field("type", "keyword").endObject()
+				.startObject("pc_remoteInfo8").field("type", "keyword").endObject().startObject("pc_remoteInfo9")
+				.field("type", "keyword").endObject().startObject("pc_remoteInfo10").field("type", "keyword")
+				.endObject().startObject("pc_foresicInfo").field("type", "keyword").endObject()
+				.startObject("pc_isWinDefender").field("type", "keyword").endObject().startObject("pc_isWinFirewall")
+				.field("type", "keyword").endObject().startObject("pc_isAutoPatch").field("type", "keyword").endObject()
+				.startObject("pc_isCertMisuse").field("type", "keyword").endObject().startObject("sm_DI")
+				.field("type", "keyword").endObject().startObject("sm_D1").field("type", "keyword").endObject()
+				.startObject("sm_D2").field("type", "keyword").endObject().startObject("sm_deviceId")
+				.field("type", "keyword").endObject().startObject("sm_imei").field("type", "keyword").endObject()
+				.startObject("sm_imsi").field("type", "keyword").endObject().startObject("sm_usim")
+				.field("type", "keyword").endObject().startObject("sm_uuid").field("type", "keyword").endObject()
+				.startObject("sm_wifiMacAddr").field("type", "keyword").endObject().startObject("sm_ethernetMacAddr")
+				.field("type", "keyword").endObject().startObject("sm_btMacAddr").field("type", "keyword").endObject()
+				.startObject("sm_deviceModel").field("type", "keyword").endObject().startObject("sm_osVersion")
+				.field("type", "keyword").endObject().startObject("sm_service").field("type", "keyword").endObject()
+				.startObject("sm_locale").field("type", "keyword").endObject().startObject("sm_network")
+				.field("type", "keyword").endObject().startObject("sm_publicIP").field("type", "keyword").endObject()
+				.startObject("sm_wifi_ip").field("type", "keyword").endObject().startObject("sm_3g_ip")
+				.field("type", "integer").endObject().startObject("sm_jailBreak").field("type", "keyword").endObject()
+				.startObject("sm_roaming").field("type", "keyword").endObject().startObject("sm_proxyIp")
+				.field("type", "keyword").endObject().startObject("sm_wifiApSsid").field("type", "keyword").endObject()
+				.startObject("sm_mobileAPSsid").field("type", "keyword").endObject().startObject("sm_mobileNumber")
+				.field("type", "keyword").endObject().startObject("sm_login_uuid").field("type", "keyword").endObject()
+				.startObject("workGbn").field("type", "keyword").endObject().startObject("workType")
+				.field("type", "keyword").endObject().startObject("securityMediaType").field("type", "keyword")
+				.endObject().startObject("totalScore").field("type", "integer").endObject().startObject("executeTime")
+				.field("type", "keyword").endObject().startObject("responseCode").field("type", "keyword").endObject()
+				.startObject("ruleGroupName").field("type", "keyword").endObject().startObject("ruleId")
+				.field("type", "keyword").endObject().startObject("ruleName").field("type", "keyword").endObject()
+				.startObject("ruleType").field("type", "keyword").endObject().startObject("blockingType")
+				.field("type", "keyword").endObject().startObject("country").field("type", "keyword").endObject()
+				.startObject("doaddress").field("type", "keyword").endObject().startObject("processState")
+				.field("type", "keyword").endObject().startObject("comment").field("type", "keyword").endObject()
+				.startObject("isIdentified").field("type", "keyword").endObject().startObject("isCertified")
+				.field("type", "keyword").endObject().startObject("hasReleaseDateTime").field("type", "keyword")
+				.endObject().startObject("releaseDateTime").field("type", "keyword").endObject()
+				.startObject("personInCharge").field("type", "keyword").endObject().startObject("ruleDetail")
+				.field("type", "keyword").endObject().startObject("response").startObject("properties")
+				.startObject("TR_DTM").field("type", "date").field("format", "yyyy-MM-dd HH:mm:ss").endObject()
+				.startObject("logId").field("type", "keyword").endObject().startObject("userId")
+				.field("type", "keyword").endObject().startObject("detectDateTime").field("type", "date")
+				.field("format", "yyyy-MM-dd HH:mm:ss").endObject().startObject("detectNanoTime")
+				.field("type", "keyword").endObject().startObject("ruleId").field("type", "keyword").endObject()
+				.startObject("ruleGroupName").field("type", "keyword").endObject().startObject("ruleType")
+				.field("type", "keyword").endObject().startObject("ruleName").field("type", "keyword").endObject()
+				.startObject("score").field("type", "integer").endObject().startObject("ruleDetail")
+				.field("type", "keyword").endObject().startObject("blockingType").field("type", "keyword").endObject()
+				.startObject("detailLog").field("type", "keyword").endObject().startObject("EBNK_MED_DSC")
+				.field("type", "keyword").endObject().endObject().endObject()
+
+				.endObject().endObject();
+		request.mapping("_doc", indexBuilder);
+		AcknowledgedResponse putTemplateResponse = es.getClient().indices().putTemplate(request,
+				RequestOptions.DEFAULT);
+		boolean acknowledged = putTemplateResponse.isAcknowledged();
+		return acknowledged;
+	}
+
+	static String[] RMS_SVC_C = new String[] { "EAIPROGGR0", "EAIPSIL0I0", "EAIPSIL0I1", "EAIPSIL0I2", "EANBMM45I0",
+			"EAIPYE00I0", "EAAPAT00I0", "EAIPYE00I2", "EANBMM98R0", "EANBMM16R0", "EANBMM98R1", "EANBEA01I0",
+			"EAIPROGGR1", "EANBMM44I0", "EAICDD02I0", "EAICDD02I1", "EAAPWO01I0", "EAOPCA07I0", "EAOPSAP1I0",
+			"EAOPSAS1I0", "EAOPSAT1I0", "EAICROGGR0", "EAICSIL0I0", "EAICSIL0I1", "EAICSIL0I2", "EANBMM45I0",
+			"EAIPYE00I0", "EAAPAT00I0", "EAICYE02I0", "EATBROGGR0", "EATBSIL0I0", "EATBSIL0I1", "EATBSIL0I2",
+			"EAMOAL02R0", "EAMOROGGR0" };
+	static String[] USER_ID = new String[] { "TESTUSER" };
+	static String[] blockingType = new String[] { "C", "B", "P" };
+	static String[] ip = new String[] { "192", "168", "201", "0" };
+	static String[] workGbn = new String[] { "0", "2" };
+	static String[] ruleID = new String[] { "Rule_LO_C01", "Rule_LO_C02", "Rule_LO_C03", "Rule_TR_C02", "Rule_TR_C03" };
+	static String[] ruleName = new String[] { "aaaa", "bbbb", "cccc", "dddd", "eeee", "ffff" };
+	static String[] ruleType = new String[] { "濡쒓렇�씤" };
+	static String[] processS = new String[] { "N", "ONGOING", "IMPOSSIBLE", "COMPLETED", "DOUBTFUL", "FRAUD" };
+	static String[] securityMediaType = new String[] { "1", "2" };
+	static String[] yNType = new String[] { "Y", "N" };
+	static String[] EBNK_MED_DSC = new String[] { "091", "070", "024", "021", "022", "023", "151", "152", "156", "157",
+			"026", "027", "991", "100", "101", "110", "111", "105", "106", "115", "116" };
+	static String[] macAddrList = new String[] { "6E-6E-6E-6E-6E-61", "6E-6E-6E-6E-6E-62", "6E-6E-6E-6E-6E-63",
+			"6E-6E-6E-6E-6E-64", "6E-6E-6E-6E-6E-65", "6E-6E-6E-6E-6E-66", "6E-6E-6E-6E-6E-66" };
+	static String[] ipAddrList = new String[] { "6E-6E-6E-6E-6E-61", "6E-6E-6E-6E-6E-62", "6E-6E-6E-6E-6E-63",
+			"6E-6E-6E-6E-6E-64", "6E-6E-6E-6E-6E-65", "6E-6E-6E-6E-6E-66", "6E-6E-6E-6E-6E-66" };
+	static String[] mobileCompanyName = new String[] { "Apple", "Samsung", "LG", "Saomi", "Blackberry" };
+	static Random rand = new Random();
+	static String[] country = new String[] { "KR", "USA", "PHILIPPINES", "JAPAN", "CHINA", "HONGKONG", "RUSSIA",
+			"FRANCE", "GERMANY" };
+
+}

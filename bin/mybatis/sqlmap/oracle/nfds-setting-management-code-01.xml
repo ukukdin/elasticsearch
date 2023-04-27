@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding= "UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+ 
+<mapper namespace="nurier.scraping.setting.dao.CodeManagementSqlMapper">
+    
+    <select id="getCodeHDList" resultType="codeDataVO">
+		SELECT SEQ_NUM
+		     , CODE_NO
+		     , REMARK
+		     , IS_USED
+		     , CODE_GROUP
+		  FROM NFDS_CODE_HD
+		 ORDER BY CODE_GROUP
+    </select>
+    
+    <select id="getCodeDTList" parameterType="codeDataVO" resultType="codeDataVO">
+		SELECT DT.SEQ_NUM
+		     , DT.CODE
+		     , DT.TEXT1
+		     , DT.TEXT2
+		     , DT.SORT_SEQ
+		     , DT.IS_USED
+		     , HD.CODE_GROUP
+		  FROM NFDS_CODE_HD HD
+		     , NFDS_CODE_DT DT
+		 WHERE HD.CODE_NO = #{code_no}
+		 AND HD.CODE_NO = DT.CODE_NO
+         AND DT.IS_USED = 'Y'
+		 ORDER BY DT.SEQ_NUM
+    </select>
+    
+    <select id="getCodeDataListL" resultType="codeDataVO">
+		SELECT HD.SEQ_NUM
+		     , HD.CODE_NO as code_no
+		     , HD.REMARK as remark
+		     , HD.IS_USED as is_used
+		     , COUNT(DT.SEQ_NUM) AS cnt
+		     , HD.CODE_GROUP
+		  FROM NFDS_CODE_HD HD
+		     , NFDS_CODE_DT DT
+		 WHERE HD.CODE_NO = DT.CODE_NO (+)
+		 GROUP BY HD.SEQ_NUM
+		     , HD.CODE_NO
+		     , HD.REMARK
+		     , HD.IS_USED
+		     , HD.CODE_GROUP
+		 ORDER BY SEQ_NUM
+    </select>
+    <select id="getCodeDataListR" resultType="codeDataVO">
+		SELECT SEQ_NUM as seq_num
+		     , CODE_NO as code_no
+		     , CODE as code
+		     , TEXT1 as text1
+		     , TEXT2 as text2
+		     , IS_USED as is_used
+		  FROM NFDS_CODE_DT
+		 ORDER BY SEQ_NUM
+    </select>
+    <select id="getCodeDataSelect" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <include refid="paging.headerPagingStart"/>
+		SELECT DT.SEQ_NUM as seq_num
+		     , DT.CODE_NO as code_no
+		     , DT.CODE as code
+		     , DT.TEXT1 as text1
+		     , DT.TEXT2 as text2
+		     , DT.SORT_SEQ as sort_seq
+		     , DT.IS_USED as is_used
+		     , HD.REMARK as remark
+		     , HD.CODE_GROUP
+		     , DT.MESSAGE_TYPE as message_type
+		     , DT.CODE_SIZE as code_size
+		  FROM NFDS_CODE_DT DT
+		     , NFDS_CODE_HD HD
+		 WHERE 1=1
+        <if test='code_no != ""'>
+		   AND DT.CODE_NO = #{code_no}
+		</if>
+		<if test='searchCode != ""'>
+		   AND UPPER(DT.CODE) LIKE UPPER(CONCAT('%',CONCAT(#{searchCode},'%')))
+		 </if>
+		 <if test='searchName != ""'>
+		   AND DT.TEXT1 LIKE CONCAT('%',CONCAT(#{searchName},'%'))
+		 </if>
+		   AND DT.CODE_NO = HD.CODE_NO
+        ORDER BY TO_NUMBER(DT.SORT_SEQ)
+        <include refid="paging.footerPagingEnd"/>
+    </select>
+    <select id="getCodeDataInfoHd" parameterType="codeDataVO" resultType="codeDataVO">
+		SELECT HD.SEQ_NUM as seq_num,
+		       HD.CODE_NO as code_no,
+		       HD.REMARK as remark,
+		       HD.IS_USED as is_used,
+		       COUNT(DT.SEQ_NUM) AS cnt,
+		       HD.CODE_GROUP as code_group
+		  FROM NFDS_CODE_HD HD,
+		       NFDS_CODE_DT DT
+		 WHERE HD.SEQ_NUM = #{seq_num}
+		   AND HD.CODE_NO = DT.CODE_NO (+ )
+		 GROUP BY HD.SEQ_NUM,
+		       HD.CODE_NO,
+		       HD.REMARK,
+		       HD.IS_USED,
+		       HD.CODE_GROUP
+    </select>
+    <select id="getCodeDataInfoDt" parameterType="codeDataVO" resultType="codeDataVO">
+		SELECT SEQ_NUM as seq_num
+		     , CODE_NO as code_no
+		     , CODE as code
+		     , TEXT1 as text1
+		     , TEXT2 as text2
+		     , SORT_SEQ as sort_seq
+		     , IS_USED as is_used
+		     , MESSAGE_TYPE as message_type
+		     , CODE_SIZE as code_size
+		  FROM NFDS_CODE_DT
+		 WHERE SEQ_NUM = #{seq_num}
+    </select>
+    <update id="setCodeDataUpdate" parameterType="codeDataVO">
+		UPDATE NFDS_CODE_HD
+		   SET CODE_NO = #{code_no}
+		     , REMARK = #{remark}
+		     , IS_USED = #{is_used}
+		     , CODE_GROUP = #{code_group}
+		 WHERE SEQ_NUM = #{seq_num}
+    </update>
+    <update id="setCodeDataUpdateDt" parameterType="codeDataVO">
+		UPDATE NFDS_CODE_DT
+		   SET CODE_NO = #{code_no}
+		     , CODE = #{code}
+		     , TEXT1 = #{text1}
+		     , TEXT2 = #{text2}
+		     , SORT_SEQ = #{sort_seq}
+		     , IS_USED = #{is_used}
+		     , MESSAGE_TYPE = #{message_type}
+		     , CODE_SIZE = #{code_size}
+		 WHERE SEQ_NUM = #{seq_num}
+    </update>
+    <insert id="setCodeDataInsert" parameterType="codeDataVO">
+	    <selectKey resultType="String" keyProperty="seq_num" order="BEFORE">
+            SELECT NVL(MAX(SEQ_NUM),0)+1 as seq_num FROM NFDS_CODE_HD
+        </selectKey>
+        	INSERT
+		  		INTO NFDS_CODE_HD (SEQ_NUM, CODE_NO, REMARK, REG_DATE, REG_USER_ID, IS_USED, CODE_GROUP )
+			VALUES (#{seq_num}, #{code_no}, #{remark}, SYSDATE, 'admin', #{is_used}, #{code_group})
+    </insert>
+    <insert id="setCodeDataInsertDt" parameterType="codeDataVO">
+	    <selectKey resultType="String" keyProperty="seq_num" order="BEFORE">
+            SELECT NVL(MAX(SEQ_NUM),0)+1 as seq_num FROM NFDS_CODE_DT
+        </selectKey>
+			INSERT
+			  INTO NFDS_CODE_DT (SEQ_NUM, CODE_NO, CODE, TEXT1, TEXT2, SORT_SEQ, REG_DATE, REG_USER_ID, IS_USED, MESSAGE_TYPE, CODE_SIZE )
+			VALUES (#{seq_num}, #{code_no}, #{code}, #{text1}, #{text2}, #{sort_seq}, SYSDATE, 'admin', #{is_used}, #{message_type}, #{code_size})
+    </insert>
+    <delete id="setCodeDataDelete" parameterType="codeDataVO">
+        DELETE FROM NFDS_CODE_HD
+        WHERE SEQ_NUM = #{seq_num}
+    </delete>
+    <delete id="setCodeDataDeleteDt" parameterType="codeDataVO">
+        DELETE FROM NFDS_CODE_DT
+        WHERE SEQ_NUM = #{seq_num}
+    </delete>
+    <delete id="setCodeDataDeleteDtAll" parameterType="codeDataVO">
+        DELETE FROM NFDS_CODE_DT
+    </delete>
+    <select id="getCodeHdCheckCnt" parameterType="codeDataVO" resultType="int">
+		SELECT COUNT(CODE_NO)
+		  FROM NFDS_CODE_HD
+		 WHERE CODE_NO = #{code_no}
+    </select>
+    <select id="getCodeDtCheckCnt" parameterType="codeDataVO" resultType="int">
+		SELECT COUNT(CODE)
+		  FROM NFDS_CODE_DT
+		 WHERE CODE = #{code}
+		 AND CODE_NO = #{code_no}
+    </select>
+    <update id="setCodeDataGroupCodeUpdate" parameterType="codeDataVO">
+		UPDATE NFDS_CODE_DT
+		   SET CODE_NO = #{code_no}
+		 WHERE CODE_NO = #{code_check}
+    </update>
+    
+    <select id="getMappingCodeList" parameterType="codeDataVO" resultType="codeDataVO">
+		SELECT *
+		  FROM NFDS_CODE_HD
+		 WHERE CODE_GROUP = 'MAPPING'
+		 ORDER BY SEQ_NUM
+    </select>
+    
+    <select id="getWhereExList" parameterType="codeDataVO" resultType="codeDataVO">
+		SELECT *
+		  FROM NFDS_CODE_DT
+		 WHERE CODE_NO = 'QUERY_WHERE_EX'
+		 ORDER BY SEQ_NUM
+    </select>
+    <select id="getCodeDataInfoDtList" parameterType="codeDataVO" resultType="codeDataVO">
+		SELECT SEQ_NUM as seq_num
+		     , CODE_NO as code_no
+		     , CODE as code
+		     , TEXT1 as text1
+		     , TEXT2 as text2
+		     , SORT_SEQ as sort_seq
+		     , IS_USED as is_used
+		     , MESSAGE_TYPE as message_type
+		     , CODE_SIZE as code_size
+		  FROM NFDS_CODE_DT
+		ORDER BY SEQ_NUM
+	</select>
+    <insert id="setCodeDataInsertDtExcel" parameterType="codeDataVO">
+		INSERT
+		  INTO NFDS_CODE_DT (SEQ_NUM, CODE_NO, CODE, TEXT1, TEXT2, SORT_SEQ, REG_DATE, REG_USER_ID, IS_USED, MESSAGE_TYPE, CODE_SIZE )
+		VALUES (#{seq_num}, #{code_no}, #{code}, #{text1}, #{text2}, #{sort_seq}, SYSDATE, 'admin', #{is_used}, #{message_type}, #{code_size})
+    </insert>
+    
+    <select id="getListOfCodeDt" parameterType="String" resultType="java.util.HashMap">
+        SELECT
+            SEQ_NUM AS SEQ_NUM,
+            CODE AS CODE,
+            TEXT1 AS TEXT1,
+            TEXT2 AS TEXT2,
+            SORT_SEQ AS SORT_SEQ,
+            IS_USED AS IS_USED
+        FROM
+            NFDS_CODE_DT
+         WHERE
+            CODE_NO = #{code_no}
+         AND IS_USED = 'Y'
+         ORDER BY TO_NUMBER(SORT_SEQ)
+    </select>
+    
+    <select id="getCodeDtName" parameterType="String" resultType="String">
+        SELECT
+            TEXT1 AS TEXT1
+        FROM
+            NFDS_CODE_DT
+         WHERE
+            CODE = #{codeValue}
+         AND IS_USED = 'Y'
+            
+    </select>
+</mapper>

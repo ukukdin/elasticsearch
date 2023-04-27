@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding= "UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+ 
+<mapper namespace="com.nurier.web.nfds.setting.dao.StatisticsDataManagementSqlMapper">
+
+
+    <!-- 통계데이터조건 리스트 출력 페이징처리-->
+    <select id="getStatisticsDataListPaging" parameterType="java.util.HashMap" resultType="StatisticsDataVO">
+        <include refid="paging.headerPagingStart"/>
+        SELECT * 
+        FROM NFDS_STATISTICS_DATA
+        WHERE TYPE = 1
+        ORDER BY NAME ASC
+        <include refid="paging.footerPagingEnd"/>
+    </select>
+
+    <!-- 통계데이터조건 리스트 출력 -->
+    <select id="getStatisticsDataList" resultType="StatisticsDataVO">
+        SELECT * 
+        FROM NFDS_STATISTICS_DATA
+        WHERE TYPE = 1
+        ORDER BY NAME ASC
+    </select>
+
+    <!-- 통계데이터조건 수정데이타 출력 -->
+    <select id="getStatisticsDataOfSeqNum" parameterType="String" resultType="StatisticsDataVO">
+        SELECT * 
+        FROM NFDS_STATISTICS_DATA
+        WHERE TYPE = 1
+        AND SEQ_NUM = #{seq_num}
+    </select>
+    
+    <!-- 원격프로그램 예외등록 리스트 총 수 -->
+    <select id="getTotalNumberOfRecordsOfStatisticsList" parameterType="java.util.HashMap" resultType="int">
+        SELECT
+            COUNT(SEQ_NUM)
+        FROM NFDS_STATISTICS_DATA
+        WHERE TYPE = 1
+    </select>
+
+    <!-- 통계데이터조건 등록 -->
+    <insert id="setStatisticsDataInsert" parameterType="java.util.HashMap">
+        <selectKey resultType="String" keyProperty="seq_num" order="BEFORE">
+            SELECT NVL(MAX(SEQ_NUM),0)+1 seq_num FROM NFDS_STATISTICS_DATA
+        </selectKey>
+        INSERT INTO NFDS_STATISTICS_DATA 
+        (
+        SEQ_NUM,
+        TYPE,
+        NAME,
+        REMARK,
+        SCRIPT,
+        REFERENCE1,
+        RGDATE,
+        RGNAME
+        ) VALUES (
+        #{seq_num},
+        #{TYPE},
+        #{NAME},
+        #{REMARK},
+        #{CQLSCRIPT},
+        #{REFERENCE1},
+        TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'),
+        #{RGNAME}
+        )
+    </insert>
+    
+    <!-- 통계데이터 삭제 -->
+    <delete id="setStatisticsDataDelete" parameterType="String">
+        DELETE NFDS_STATISTICS_DATA WHERE NAME = #{del_name}
+    </delete>
+    
+    <!-- 통계데이터조건 수정 -->
+    <update id="setStatisticsDataUpdate" parameterType="java.util.HashMap">
+        UPDATE NFDS_STATISTICS_DATA SET
+            NAME    = #{NAME},
+            REMARK  = #{REMARK}, 
+            SCRIPT  = #{CQLSCRIPT}, 
+            REFERENCE1  = #{REFERENCE1}, 
+            MODDATE = TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 
+            MODNAME = #{MODNAME} 
+        WHERE SEQ_NUM = #{SEQ_NUM}
+    </update>
+    
+    <!-- type2 reference1 data 출력 -->
+    <select id="getStatisticsDataType2RuleList" resultType="StatisticsDataVO">
+        SELECT REFERENCE1
+        FROM NFDS_STATISTICS_DATA
+        WHERE TYPE = 2
+        and REFERENCE2 = #{listSeqNum}
+        ORDER BY NAME ASC
+    </select>
+
+    <!-- type1 리스트 출력 -->
+    <select id="getStatisticsDataType1RuleList" resultType="StatisticsDataVO">
+        SELECT *
+        FROM NFDS_STATISTICS_DATA
+        WHERE SEQ_NUM = #{reference1}
+        ORDER BY NAME ASC
+    </select>
+
+    <!-- 통계데이터적용 리스트 출력을 위한 seq_num 추출 -->
+    <select id="getStatisticsDataType3SeqNum" resultType="String">
+        SELECT SEQ_NUM 
+        FROM NFDS_STATISTICS_DATA
+        WHERE TYPE = 3
+        and NAME = #{serviceType}
+    </select>
+    <!-- 통계데이터적용 리스트 출력 -->
+    <select id="getStatisticsDataType3List" parameterType="String" resultType="StatisticsDataVO">
+        SELECT  SCRIPT 
+        FROM NFDS_STATISTICS_DATA
+        WHERE TYPE = 3
+        and NAME = #{serviceType}
+    </select>
+    <!-- 통계데이터적용(type3) 등록 -->
+    <insert id="setStatisticsRuleDataInsert" parameterType="java.util.HashMap">
+        <selectKey resultType="String" keyProperty="seq_num" order="BEFORE">
+            SELECT NVL(MAX(SEQ_NUM),0)+1 seq_num FROM NFDS_STATISTICS_DATA
+        </selectKey>
+        INSERT INTO NFDS_STATISTICS_DATA 
+        (
+        SEQ_NUM,
+        TYPE,
+        NAME,
+        SCRIPT,
+        RGDATE,
+        RGNAME
+        ) VALUES (
+        #{seq_num},
+        #{TYPE},
+        #{NAME},
+        #{CQLSCRIPT},
+        TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'),
+        #{RGNAME}
+        )
+    </insert>
+    
+    <!-- 타입3 순번가져오기 -->
+    <select id="getType3SeqNum" parameterType="String" resultType="String">
+        SELECT NVL(MAX(SEQ_NUM),0) seq_num 
+        FROM NFDS_STATISTICS_DATA
+        WHERE TYPE = 3
+    </select>
+    
+    <!-- 타입2 Insert -->
+    <insert id="setStatisticsType2Insert" parameterType="String">
+        <selectKey resultType="String" keyProperty="seq_num" order="BEFORE">
+            SELECT NVL(MAX(SEQ_NUM),0)+1 seq_num FROM NFDS_STATISTICS_DATA
+        </selectKey>
+        INSERT INTO NFDS_STATISTICS_DATA 
+        (
+        SEQ_NUM,
+        TYPE,
+        NAME,
+        REMARK,
+        REFERENCE1,
+        REFERENCE2
+        ) VALUES (
+        #{seq_num},
+        #{TYPE},
+        #{NAME},
+        #{REMARK},
+        #{REFERENCE1},
+        #{REFERENCE2}
+        )
+    </insert>
+    
+    <!-- 타입3 Update -->
+    <update id="setStatisticsDataType3Update" parameterType="java.util.HashMap">
+        UPDATE NFDS_STATISTICS_DATA SET 
+          SCRIPT = #{CQLSCRIPT},
+          MODNAME = #{MODNAME}
+        WHERE NAME = #{NAME}
+    </update>
+    
+    <!-- 타입2 delete -->
+    <delete id="setStatisticsDataType2Delete" parameterType="String">
+        DELETE NFDS_STATISTICS_DATA WHERE REFERENCE2 = #{del_seqnum}
+    </delete>
+</mapper>

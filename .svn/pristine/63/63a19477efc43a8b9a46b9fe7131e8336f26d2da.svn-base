@@ -1,0 +1,49 @@
+
+
+
+# IP Address Of development server (WAS)
+was.development.server.ip=192.168.0.41
+
+jdbc.nfds.driverClassName=oracle.jdbc.driver.OracleDriver
+jdbc.nfds.url=jdbc:oracle:thin:@192.168.0.201:1521:xe
+jdbc.nfds.username=nfdsdb
+jdbc.nfds.password=fds
+
+
+# elasticsearch setting info
+# PROPERTIES FOR SEARCH ENGINE(operation)
+searchEngine.operation.server.ip=192.168.0.43
+searchEngine.operation.server.port=9210
+searchEngine.development.server.clusterName=BACKUPNPAS
+searchEngine.development.server.userName=nurier
+searchEngine.development.server.userPassword=nacf!@34
+
+
+# PROPERTIES FOR SEARCH ENGINE(development)
+searchEngine.development.server.ip=192.168.0.43
+searchEngine.development.server.port=9210
+searchEngine.development.server.clusterName=BACKUPNPAS
+searchEngine.development.server.userName=nurier
+searchEngine.development.server.userPassword=nacf!@34
+
+# m M/D + M/D
+#168.0.46:9210,192.168.0.201:9210,192.168.0.201:9211
+#168.0.46:9210,192.168.0.201:9210,192.168.0.201:9211
+searchEngine.operation.server.list=192.168.0.43:9203,192.168.0.43:9210,192.168.0.46:9210
+searchEngine.development.server.list=192.168.0.43:9203,192.168.0.43:9210,192.168.0.46:9210
+
+#searchEngine.operation.server.list=192.168.0.42:9200,192.168.0.42:9201,192.168.0.46:9200,192.168.0.46:9201,192.168.0.43:9200,192.168.0.43:9201
+#searchEngine.development.server.list=192.168.0.42:9200,192.168.0.42:9201,192.168.0.46:9200,192.168.0.46:9201,192.168.0.43:9200,192.168.0.43:9201
+
+#searchEngine.operation.server.list=192.168.0.42:9210,192.168.0.43:9210,192.168.0.43:9211,192.168.0.46:9210
+#searchEngine.development.server.list=92.168.0.42:9210,192.168.0.43:9210,192.168.0.43:9211,192.168.0.46:9210
+kafka.operation.bootstrap.server.list=192.168.0.42:9091,192.168.0.43:9091,192.168.0.46:9091
+kafka.development.bootstrap.server.list=192.168.0.42:9091,192.168.0.43:9091,192.168.0.46:9091
+
+# REDIS
+redis.operation.server.list=192.168.0.42:8001,192.168.0.42:8002,192.168.0.43:8003,192.168.0.43:8004,192.168.0.46:8005,192.168.0.46:8006
+redis.development.server.list=192.168.0.42:8001,192.168.0.42:8002,192.168.0.43:8003,192.168.0.43:8004,192.168.0.46:8005,192.168.0.46:8006
+
+# PROPERTIES FOR DETECTION ENGINE(development)
+detectionEngine.01.development.server=http://192.168.40.18:18000/
+

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding= "UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+ 
+
+<mapper namespace="nurier.scraping.dashboard.dao.MinwonListSqlMapper">  
+
+
+
+
+    <!-- 민원처리 list 반환 -->
+    <select id="getListOfMinwon" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <include refid="paging.headerPagingStart"/>
+      SELECT TO_CHAR(A.SEQ_NUM) AS SEQ_NUM
+           , A.RGDATE           AS RGDATE
+           , A.RGNAME           AS RGNAME
+           , A.RGIPADDR         AS RGIPADDR
+           , A.PROCESS_STATE    AS PROCESS_STATE
+           , A.CIVIL_COMPLAINT  AS CIVIL_COMPLAINT
+           , A.COMPLAINT_TYPE   AS COMPLAINT_TYPE
+           , A.REMARK           AS REMARK
+           , B.USER_NAME        AS USER_NAME
+        FROM NFDS_CALLCENTER_COMMENT A,NFDS_USER B
+       WHERE TO_NUMBER(A.RGDATE) BETWEEN TO_NUMBER(#{fromDateTime}) AND TO_NUMBER(#{toDateTime})
+         AND A.CIVIL_COMPLAINT = 'Y'
+         AND A.RGNAME = B.USER_ID
+    ORDER BY RGDATE DESC
+    <include refid="paging.footerPagingEnd"/>
+    </select>
+    
+    <!-- 민원처리 Excel 반환 -->
+    <select id="getListOfMinwonExcel" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+      SELECT TO_CHAR(A.SEQ_NUM) AS SEQ_NUM
+           , A.RGDATE           AS RGDATE
+           , A.RGNAME           AS RGNAME
+           , A.RGIPADDR         AS RGIPADDR
+           , A.PROCESS_STATE    AS PROCESS_STATE
+           , A.CIVIL_COMPLAINT  AS CIVIL_COMPLAINT
+           , A.COMPLAINT_TYPE   AS COMPLAINT_TYPE
+           , A.REMARK           AS REMARK
+           , B.USER_NAME        AS USER_NAME
+        FROM NFDS_CALLCENTER_COMMENT A,NFDS_USER B
+       WHERE TO_NUMBER(A.RGDATE) BETWEEN TO_NUMBER(#{fromDateTime}) AND TO_NUMBER(#{toDateTime})
+         AND A.CIVIL_COMPLAINT = 'Y'
+         AND A.RGNAME = B.USER_ID
+    ORDER BY RGDATE DESC
+    </select>
+    
+</mapper>

@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                           http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://www.springframework.org/schema/mvc
+                           http://www.springframework.org/schema/mvc/spring-mvc.xsd">
+
+
+    <bean class="org.springframework.web.servlet.view.ContentNegotiatingViewResolver">
+        <property name="order" value="0" />
+        <property name="contentNegotiationManager">
+            <bean class="org.springframework.web.accept.ContentNegotiationManager">
+                <constructor-arg>
+                    <bean class="org.springframework.web.accept.PathExtensionContentNegotiationStrategy">
+                        <constructor-arg>
+                            <map>
+                                <entry key="html"   value="text/html"/>
+                                <entry key="json"   value="application/json" />
+                                <entry key="jsonp"  value="javascript/json" />
+                                <entry key="xml"    value="application/xml" />
+                            </map>
+                        </constructor-arg>
+                    </bean>
+                </constructor-arg>
+            </bean>
+        </property>
+
+        <!-- ViewResolvers -->
+        <property name="viewResolvers">
+            <list>
+                <bean class="org.springframework.web.servlet.view.BeanNameViewResolver" />
+                
+                <bean class="org.springframework.web.servlet.view.tiles3.TilesViewResolver">
+                    <property name="viewClass"      value="org.springframework.web.servlet.view.tiles3.TilesView" />
+                    <property name="contentType"    value="text/html" />
+                    <property name="order"          value="1" />
+                </bean>
+                
+                <bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+                    <property name="viewClass"      value="org.springframework.web.servlet.view.JstlView" />
+                    <property name="prefix"         value="/WEB-INF/jsp/service/main/" />
+                    <property name="suffix"         value=".jsp" />
+                    <property name="order"          value="2" />
+                </bean>
+            </list>
+        </property>
+
+        <!-- DefaultViews -->
+        <property name="defaultViews">
+            <list>
+                <ref bean="jacksonJsonView" />                
+            </list>
+        </property>
+    </bean>
+
+    <!-- tiles configurer -->
+    <bean id="tilesConfigurer" class="org.springframework.web.servlet.view.tiles3.TilesConfigurer">
+        <!-- // completeAutoload 프로퍼티의 값을 true로 설정하면 tiles 설정파일에서 EL, REGEXP를 사용할 수 있다 (pom 에서  tiles-extras, tiles-el 를 추가해야한다.)
+        <property name="completeAutoload"          value="true"/>
+        -->
+        <property name="useMutableTilesContainer"  value="true" />
+        <property name="checkRefresh"              value="true" />
+        <property name="definitions">
+            <list>
+                <!-- <value>classpath:/tiles/tiles-*.xml</value> -->
+                <value>classpath:/tiles/tiles-definitions.xml</value>
+            </list>
+        </property>
+    </bean>
+
+    <!-- JSON View -->
+    <bean id="jacksonJsonView" class="org.springframework.web.servlet.view.json.MappingJackson2JsonView">
+        <property name="contentType"    value="application/json;charset=UTF-8" />
+    </bean>
+
+    
+    <!-- <bean id="excelViewForReport" class="com.nurier.web.common.view.ExcelViewForReport" /> -->
+
+    
+    <mvc:default-servlet-handler />                                             <!-- local(tomcat) 에서의 설정값 -->    
+    <!-- <mvc:default-servlet-handler default-servlet-name="WorkerServlet"/> --><!-- JEUS 에서의 설정값          -->
+
+</beans>

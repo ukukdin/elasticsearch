@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+   
+<mapper namespace="nurier.scraping.setting.dao.RuleScorePolicyManagementsqlMapper">
+<!-- 롤/스코어 정책 리스트 총 수 -->
+<select id="getTotalNumberOfRecordsOfRulePolicyDataList" parameterType="java.util.HashMap" resultType="int">
+    SELECT
+        COUNT(SEQ_NUM)
+    FROM NFDS_RULE_SET
+    WHERE type= #{type}
+
+</select>
+
+<!-- 룰/스코어 정책 리스트 출력 페이징처리-->
+<select id="getRulePolicyDataListPaging" parameterType="java.util.HashMap" resultType="RuleScorePolicyVO">
+    <include refid="paging.headerPagingStart"/>
+    SELECT *
+    FROM NFDS_RULE_SET
+    WHERE type = #{type}
+    ORDER by NAME ASC
+    <include refid="paging.footerPagingEnd"/>
+</select>
+
+<!-- 룰/스코어 정책 리스트 출력 -->
+<select id="getRulePolicyDataList" parameterType="String" resultType="RuleScorePolicyVO">
+    SELECT *
+    FROM NFDS_RULE_SET
+    WHERE type = #{type}
+    ORDER by NAME ASC
+</select>
+
+<!-- 룰/스코어 정책 리스트 등록 -->
+<insert id="setRulePolicyManagementInsert" parameterType="java.util.HashMap">
+    <selectKey resultType="String" keyProperty="seq_num" order="BEFORE">
+        SELECT NVL(MAX(SEQ_NUM),0)+1 seq_num FROM NFDS_RULE_SET
+    </selectKey>
+    INSERT INTO NFDS_RULE_SET (
+        SEQ_NUM,
+        TYPE,
+        RULE_ID,
+        NAME,
+        SCORE,
+        RESULT_CODE,
+        REMARK,
+        RGDATE,
+        RGNAME
+    ) VALUES (
+        #{seq_num},
+        #{TYPE},
+        #{RULE_ID},
+        #{NAME},
+        #{SCORE},
+        #{RESULT_CODE},
+        #{REMARK},
+        TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'),
+        #{RGNAME}
+    )
+</insert>
+
+<!-- 룰/스코어 정책 수정리스트 출력 -->
+<select id="getRulePolicyModifyData" parameterType="String" resultType="RuleScorePolicyVO">
+    SELECT *
+    FROM NFDS_RULE_SET
+    WHERE seq_num = #{SEQ_NUM}
+</select>
+
+<!-- 룰/스코어 정책 데이터 수정 -->
+<update id="setRulePolicyDataModify" parameterType="java.util.HashMap">
+    UPDATE NFDS_RULE_SET SET
+         NAME = #{NAME},
+         SCORE = #{SCORE},
+         RESULT_CODE = #{RESULT_CODE},
+         REMARK = #{REMARK},
+         MODDATE = TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'),
+         MODNAME = #{MODNAME}
+    WHERE SEQ_NUM = #{SEQ_NUM}
+</update>
+
+<!-- 롤/스코어 정책 & 조건 데이터 삭제 -->
+<delete id="setRulePolicyAndConditionManagementListDelete" parameterType="String">
+    DELETE NFDS_RULE_SET WHERE SEQ_NUM = #{seq_num}
+</delete>
+<!-- 룰/스코어 조건 데이터 등록 -->
+<insert id="setRuleConditionManageMentInsert" parameterType="java.util.HashMap">
+    <selectKey resultType="String" keyProperty="seq_num" order="BEFORE">
+        SELECT NVL(MAX(SEQ_NUM),0)+1 seq_num FROM NFDS_RULE_SET
+    </selectKey>
+    INSERT INTO NFDS_RULE_SET (
+        SEQ_NUM,
+        TYPE,
+        RULE_ID,
+        NAME,
+        REMARK,
+        SCRIPT,
+        RGDATE,
+        RGNAME
+    ) VALUES (
+        #{seq_num},
+        #{TYPE},
+        #{RULE_ID},
+        #{NAME},
+        #{REMARK},
+        #{SCRIPT},
+        TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'),
+        #{RGNAME}
+    )
+</insert>
+
+<!-- 룰/스코어 조건 수정리스트 출력 -->
+<select id="getRuleConditionModifyData" parameterType="String" resultType="RuleScorePolicyVO">
+    SELECT *
+    FROM NFDS_RULE_SET
+    WHERE seq_num = #{type2seqnum}
+    ORDER by NAME ASC
+</select>
+
+<!-- 룰/스코어 정책 데이터 수정 -->
+<update id="setRuleConditionDataModify" parameterType="java.util.HashMap">
+    UPDATE NFDS_RULE_SET SET
+         NAME = #{NAME},
+         REMARK = #{REMARK},
+         SCRIPT = #{SCRIPT},
+         MODDATE = TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'),
+         MODNAME = #{MODNAME}
+    WHERE SEQ_NUM = #{SEQ_NUM}
+</update>
+
+<!-- 룰/스코어 관리 Type4 리스트 -->
+<select id="getRuleScoreManagementType4List" parameterType="java.util.HashMap" resultType="RuleScorePolicyVO">
+    SELECT * 
+    FROM NFDS_RULE_SET 
+    WHERE TYPE = #{TYPE}
+    AND PROCESSOR_NAME = #{PROCESSOR_NAME}
+    ORDER BY IS_USED DESC, NAME ASC
+</select>
+
+<!-- 롤/스코어 관리 데이터 수정 -->
+<select id="getRuleScoreManagementModifyData" parameterType="String" resultType="RuleScorePolicyVO">
+    SELECT *
+    FROM NFDS_RULE_SET
+    WHERE SEQ_NUM = #{seqNum}
+</select>
+
+<!-- 룰/스코어 관리 Type4 등록 -->
+<insert id="setRuleScoreManagementDataInsert" parameterType="java.util.HashMap">
+    <selectKey resultType="String" keyProperty="seq_num" order="BEFORE">
+        SELECT NVL(MAX(SEQ_NUM),0)+1 seq_num FROM NFDS_RULE_SET
+    </selectKey>
+    INSERT INTO NFDS_RULE_SET (
+        SEQ_NUM,
+        TYPE,
+        RULE_ID,
+        NAME,
+        REMARK,
+        RULE_GROUP,
+        RULE_TYPE,
+        IS_USED,
+        PROCESSOR_NAME,
+        SCORE,
+        RESULT_CODE,
+        SCRIPT,
+        RGDATE,
+        RGNAME
+    ) VALUES (
+        #{seq_num},
+        #{TYPE},
+        #{RULE_ID},
+        #{NAME},
+        #{REMARK},
+        #{RULE_GROUP},
+        #{RULE_TYPE},
+        #{IS_USED},
+        #{PROCESSOR_NAME},
+        #{SCORE},
+        #{RESULT_CODE},
+        #{SCRIPT},
+        TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'),
+        #{RGNAME}
+    )
+</insert>
+
+<!-- 롤/스코어 관리 Type4 등록한 seqnum 찾기 -->
+<select id="getType4SeqNum" resultType="String">
+    SELECT SEQ_NUM
+    FROM NFDS_RULE_SET
+    WHERE TYPE = 4
+    AND NAME = #{name}
+</select>
+
+<!-- 룰/스코어 관리 데이터 수정 -->
+<update id="setRuleScoreManagementDataUpdate" parameterType="java.util.HashMap">
+    UPDATE NFDS_RULE_SET SET
+         RULE_ID = #{RULE_ID},
+         NAME = #{NAME},
+         REMARK = #{REMARK},
+         RULE_GROUP = #{RULE_GROUP},
+         RULE_TYPE = #{RULE_TYPE},
+         IS_USED = #{IS_USED},
+         SCRIPT = #{SCRIPT},
+         PROCESSOR_NAME = #{PROCESSOR_NAME},
+         SCORE = #{SCORE},
+         RESULT_CODE = #{RESULT_CODE},
+         MODDATE = TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'),
+         MODNAME = #{MODNAME}
+    WHERE SEQ_NUM = #{SEQ_NUM}
+</update> 
+
+<!-- 룰/스코어 관리 Type3 등록 -->
+<insert id="setRuleScoreManagementType3Insert" parameterType="java.util.HashMap">
+    <selectKey resultType="String" keyProperty="seq_num" order="BEFORE">
+        SELECT NVL(MAX(SEQ_NUM),0)+1 seq_num FROM NFDS_RULE_SET
+    </selectKey>
+    INSERT INTO NFDS_RULE_SET (
+        SEQ_NUM,
+        TYPE,
+        RULE_ID,
+        REFERENCE1,
+        REFERENCE2,
+        RGDATE,
+        RGNAME
+    ) VALUES (
+        #{seq_num},
+        #{TYPE},
+        #{RULE_ID},
+        #{REFERENCE1},
+        #{REFERENCE2},
+        TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'),
+        #{RGNAME}
+    )
+</insert>
+
+<!-- 롤/스코어 Type3 데이터 삭제 -->
+<delete id="setRuleScoreManagementDataType3DataDelete" parameterType="String">
+    DELETE FROM
+        NFDS_RULE_SET
+    WHERE 
+        TYPE = 3
+        AND RULE_ID = #{RULE_ID} 
+</delete>
+
+<!-- 룰/스코어 Type2 데이터 출력 -->
+<select id="getRuleScoreManagementType3data" parameterType="String" resultType="RuleScorePolicyVO">
+    SELECT *
+    FROM NFDS_RULE_SET
+    WHERE REFERENCE2 = #{seqNum}
+</select>
+
+<!-- 룰/스코어 위치에 따른 리스트 갯수 -->
+<select id="getRuleScoreManagementTypeCount" resultType="java.util.HashMap">
+    SELECT DISTINCT
+        (select count(*) from NFDS_RULE_SET where type=4 and is_used = 'Y' and processor_name = 'RuleProcessor_Login_Common') as  A,
+        (select count(*) from NFDS_RULE_SET where type=4 and is_used = 'Y' and processor_name = 'RuleProcessor_Login_eBank') as  B,
+        (select count(*) from NFDS_RULE_SET where type=4 and is_used = 'Y' and processor_name = 'RuleProcessor_Login_Smart') as  C,
+        (select count(*) from NFDS_RULE_SET where type=4 and is_used = 'Y' and processor_name = 'RuleProcessor_Login_Tele') as  D,
+        (select count(*) from NFDS_RULE_SET where type=4 and is_used = 'Y' and processor_name = 'RuleProcessor_Transfer_Common') as  E,
+        (select count(*) from NFDS_RULE_SET where type=4 and is_used = 'Y' and processor_name = 'RuleProcessor_Transfer_eBank') as  F,
+        (select count(*) from NFDS_RULE_SET where type=4 and is_used = 'Y' and processor_name = 'RuleProcessor_Transfer_Smart') as  G,
+        (select count(*) from NFDS_RULE_SET where type=4 and is_used = 'Y' and processor_name = 'RuleProcessor_Transfer_Tele') as  H,
+        (select count(*) from NFDS_RULE_SET where type=4 and is_used = 'Y' and processor_name = 'RuleProcessor_TransferCheck_Common') as  I,
+        (select count(*) from NFDS_RULE_SET where type=4 and is_used = 'Y' and processor_name = 'RuleProcessor_TransferCheck_eBank') as  J,
+        (select count(*) from NFDS_RULE_SET where type=4 and is_used = 'Y' and processor_name = 'RuleProcessor_TransferCheck_Smart') as  K,
+        (select count(*) from NFDS_RULE_SET where type=4 and is_used = 'Y' and processor_name = 'RuleProcessor_TransferCheck_Tele') as  L,
+        (select count(*) from NFDS_RULE_SET where type=4 and is_used = 'Y' and processor_name = 'RuleProcessor_Information') as  M
+    FROM NFDS_RULE_SET
+    WHERE type = 4
+
+</select>
+
+<!-- 롤/스코어 Type4 데이터 삭제 -->
+<delete id="setRuleScoreManagementDataDelete" parameterType="String">
+    DELETE FROM
+        NFDS_RULE_SET
+    WHERE 
+        TYPE = 4
+        AND SEQ_NUM = #{seqNum} 
+</delete>
+
+<!-- 룰/스코어 MAX 시퀀스 가져오기 -->
+<select id="getRuleScoreManagementSeqNum" resultType="String">
+SELECT NVL(MAX(SEQ_NUM),0)+1 seq_num FROM NFDS_RULE_SET
+</select>
+
+</mapper>
+

@@ -1,0 +1,795 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- edited with XMLSpy v2011 sp1 (http://www.altova.com) by User (free.org) -->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:object="http://sfix.kfisac.or.kr/object-1" xmlns:organization="http://sfix.kfisac.or.kr/organization-1" targetNamespace="http://sfix.kfisac.or.kr/object-1" elementFormDefault="qualified" attributeFormDefault="unqualified" version="1.0" xml:lang="ko">
+	<xs:annotation>
+		<xs:documentation>이 스키마는 금융회사 간 이상금융거래정보 공유를 위해 금융보안원에서 개발되었습니다.</xs:documentation>
+		<xs:appinfo>
+			<schema>Object</schema>
+			<version>1.0</version>
+			<date>2016-02-22 09:00:00 AM</date>
+			<short_description>Structured Fraud Information eXpression (SFIX) - 이상금융거래정보 표현 형식 (스키마)</short_description>
+			<terms_of_use>Copyright (c) 2015, Financial Security Institutes. All rights reserved.</terms_of_use>
+		</xs:appinfo>
+	</xs:annotation>
+	<xs:import namespace="http://sfix.kfisac.or.kr/organization-1" schemaLocation="organization.xsd"/>
+	<!-- ### Attacker/Victim Object ### -->
+	<!-- PC Object -->
+	<xs:complexType name="PCType">
+		<xs:annotation>
+			<xs:documentation>PC 단말기 정보</xs:documentation>
+			<xs:documentation>PC 단말기 정보 Object로 이상금융거래에서 PC 단말기 접근이 잇을 경우 SFIX의 Attacker, Victim 계층에서 사용됩니다.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="Access_Time" type="xs:dateTime" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>PC단말기 접근시간을 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="IP_Address" type="object:IpAddressType" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>PC단말기의 공인 IP주소를 의미합니다. 클래스 대역의 IP주소를 사용할 경우 CIDR로 표기합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="MAC_Address" type="object:MacAddressType" minOccurs="0" maxOccurs="5">
+				<xs:annotation>
+					<xs:documentation>PC단말기의 MAC 주소를 의미합니다. MAC 주소가 여러 개일 경우 순차적으로 입력합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="IP_Country" type="object:CountryType" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>PC단말기의 공인IP 주소의 국가 정보를 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Private_IP" type="object:IpAddressType" minOccurs="0" maxOccurs="5">
+				<xs:annotation>
+					<xs:documentation>PC단말기의 사설IP 주소를 의미합니다. 사설IP 주소가 여러 개일 경우 순차적으로 입력합니다. 클래스 대역의 IP주소를 사용할 경우 CIDR로 표기합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Proxy_IP" type="object:IpAddressType" minOccurs="0" maxOccurs="5">
+				<xs:annotation>
+					<xs:documentation>PC단말기의 프록시IP 주소를 의미합니다. 프록시IP 주소가 여러 개일 경우 순차적으로 입력합니다. 클래스 대역의 IP주소를 사용할 경우 CIDR로 표기합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="VPN_IP" type="object:IpAddressType" minOccurs="0" maxOccurs="5">
+				<xs:annotation>
+					<xs:documentation>PC단말기의 VPN IP 주소를 의미합니다. VPN IP주소가 여러 개일 경우 순차적으로 입력합니다. 클래스 대역의 IP주소를 사용할 경우 CIDR로 표기합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Operating_System" type="object:OperatingSystemType" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>PC단말기의 운영체제 정보를 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Browser" type="object:BrowserType" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>PC단말기의 브라우저 정보를 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="HDD_Serial_Number" type="xs:string" minOccurs="0" maxOccurs="5">
+				<xs:annotation>
+					<xs:documentation>PC단말기의 HDD 시리얼 번호를 의미합니다. 시리얼 번호는 제조사와 제조번호를 포함합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Mainboard_Serial_Number" type="xs:string" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>PC단말기의 메인보드 시리얼 번호를 의미합니다. 시리얼 번호는 제조사와 제조번호를 포함합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="USB_Serial_Number" type="xs:string" minOccurs="0" maxOccurs="5">
+				<xs:annotation>
+					<xs:documentation>PC단말기의 USB 시리얼 번호를 의미합니다. 시리얼 번호는 제조사와 제조번호를 포함합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<!-- SmartPhone Object -->
+	<xs:complexType name="SmartPhoneType">
+		<xs:annotation>
+			<xs:documentation>스마트폰 단말기 정보</xs:documentation>
+			<xs:documentation>스마트폰 단말기 정보 Object로 이상금융거래에서 스마트폰 단말기 접근이 잇을 경우 SFIX의 Attacker, Victim 계층에서 사용됩니다.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="Access_Time" type="xs:dateTime" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>스마트폰 단말기 접근시간을 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="IP_Address" type="object:IpAddressType" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>스마트폰 단말기의 공인IP 주소를 의미합니다. 클래스 대역의 IP주소를 사용할 경우 CIDR로 표기합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="MAC_Address" type="object:MacAddressType" minOccurs="0" maxOccurs="5">
+				<xs:annotation>
+					<xs:documentation>스마트폰 단말기의 MAC 주소를 의미합니다. MAC 주소가 여러 개일 경우 순차적으로 입력합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="IP_Country" type="object:CountryType" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>스마트폰 단말기의 공인IP 주소의 국가 정보를 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Private_IP" type="object:IpAddressType" minOccurs="0" maxOccurs="5">
+				<xs:annotation>
+					<xs:documentation>스마트폰 단말기의 사설IP 주소를 의미합니다. 사설IP 주소가 여러 개일 경우 순차적으로 입력합니다. 클래스 대역의 IP주소를 사용할 경우 CIDR로 표기합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Proxy_IP" type="object:IpAddressType" minOccurs="0" maxOccurs="5">
+				<xs:annotation>
+					<xs:documentation>스마트폰 단말기의 프록시IP 주소를 의미합니다. 프록시IP 주소가 여러 개일 경우 순차적으로 입력합니다. 클래스 대역의 IP주소를 사용할 경우 CIDR로 표기합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="VPN_IP" type="object:IpAddressType" minOccurs="0" maxOccurs="5">
+				<xs:annotation>
+					<xs:documentation>스마트폰 단말기의 VPN IP 주소를 의미합니다. VPN IP주소가 여거 개일 경우 순차적으로 입력합니다. 클래스 대역의 IP주소를 사용할 경우 CIDR로 표기합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Locale_Country" type="object:LocaleCountryType" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>스마트폰 단말기의 디바이스에 설정된 국가 ID를 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Locale_Language" type="object:LocaleLanguageType" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>스마트폰 단말기의 디바이스에 설정된 언어 ID를 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Operating_System" type="object:OperatingSystemType" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>스마트폰 단말기의 운영체제 정보를 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Browser" type="object:BrowserType" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>스마트폰 단말기의 브라우저 정보를 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="CellphoneNumber" type="object:CellphoneNumberType" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>스마트폰 단말기의 전화번호를 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<!-- Tablet Object -->
+	<xs:complexType name="TabletType">
+		<xs:annotation>
+			<xs:documentation>테블릿 단말기 정보</xs:documentation>
+			<xs:documentation>테블릿 단말기 정보 Object로 이상금융거래에서 테블릿 단말기 접근이 있을 경우 SFIX의 Attacker, Victim 계층에서 사용됩니다.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="Access_Time" type="xs:dateTime" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>테블릿 단말기 접근시간을 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="IP_Address" type="object:IpAddressType" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>테블릿 단말기의 공인IP 주소를 의미합니다. 클래스 대역의 IP주소를 사용할 경우 CIDR로 표기합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="MAC_Address" type="object:MacAddressType" minOccurs="0" maxOccurs="5">
+				<xs:annotation>
+					<xs:documentation>테블릿 단말기의 MAC 주소를 의미합니다. MAC주소가 여러 개일 경우 순차적으로 입력합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="IP_Country" type="object:CountryType" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>테블릿 단말기의 공인IP 주소의 국가 정보를 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Private_IP" type="object:IpAddressType" minOccurs="0" maxOccurs="5">
+				<xs:annotation>
+					<xs:documentation>테블릿 단말기의 사설IP 주소를 의미합니다. 사설IP 주소가 여러 개일 경우 순차적으로 입력합니다. 클래스 대역의 IP주소를 사용할 경우 CIDR로 표기합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Proxy_IP" type="object:IpAddressType" minOccurs="0" maxOccurs="5">
+				<xs:annotation>
+					<xs:documentation>테블릿 단말기의 프록시IP 주소를 의미합니다. 프록시 IP주소가 여러 개일 경우 순차적으로 입력합니다. 클래스 대역의 IP주소를 사용할 경우 CIDR로 표기합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="VPN_IP" type="object:IpAddressType" minOccurs="0" maxOccurs="5">
+				<xs:annotation>
+					<xs:documentation>테블릿 단말기의 VPN IP주소를 의미합니다. VPN IP주소가 여러 개일 경우 순차적으로 입력합니다. 클래스 대역의 IP주소를 사용할 경우 CIDR로 표기합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Locale_Country" type="object:LocaleCountryType" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>테블릿 단말기의 디바이스에 설정된 국가 ID를 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Locale_Language" type="object:LocaleLanguageType" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>테블릿 단말기의 디바이스에 설정된 언어 ID를 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Operating_System" type="object:OperatingSystemType" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>테블릿 단말기의 운영체제 정보를 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Browser" type="object:BrowserType" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>테블릿 단말기의 브라우저 정보를 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="CellphoneNumber" type="object:CellphoneNumberType" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>테블릿 단말기의 전화번호를 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<!-- Person Object -->
+	<xs:complexType name="PersonType">
+		<xs:annotation>
+			<xs:documentation>고객정보</xs:documentation>
+			<xs:documentation>금융거래 사용자 정보 Object로 이상금융거래에서 사용자 정보가 필요한 경우 SFIX의 Attacker와 Victim 계층에서 사용됩니다.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="Name" type="xs:string" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>금융거래 사용자 이름을 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Birth_Date" type="xs:date" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>금융거래 사용자의 생년월일을 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Gender" type="object:GenderType" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>금융거래 사용자의 성별을 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Nationality" type="object:NationalityType" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>금융거래 사용자의 내국인/외국인 구분을 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Telephone_Number" type="object:TelephoneNumberType" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>금융거래 사용자의 전화번호를 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Cellphone_Number" type="object:CellphoneNumberType" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>금융거래 사용자의 핸드폰 번호를 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Address" type="xs:string" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>금융거래 사용자의 주소를 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<!-- Company Object -->
+	<xs:complexType name="CompanyType">
+		<xs:annotation>
+			<xs:documentation>회사정보</xs:documentation>
+			<xs:documentation>금융거래 회사 정보 Object로 이상금융거래에서 회사 정보가 필요한 경우 SFIX의 Attacker와 Victim 계층에서 사용됩니다.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="Company_Name" type="xs:string" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>금융거래 회사 이름을 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Business_Registration_Number" type="object:BusinessRegistrationNumberType" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>금융거래 회사의 사업자 번호를 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Owner_Name" type="xs:string" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>금융거래 회사의 대표자 이름을 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Telephone_Number" type="object:TelephoneNumberType" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>금융거래 회사의 전화번호를 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Address" type="xs:string" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>금융거래 회사의 주소를 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:simpleType name="BusinessRegistrationNumberType">
+		<xs:annotation>
+			<xs:documentation>사업자 번호 타입</xs:documentation>
+			<xs:documentation>XXX-XX-XXXXX 형태로 숫자와 -으로 표현</xs:documentation>
+			<xs:documentation>기업의 사업자 등록번호를 나타내는 정보입니다.</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:pattern value="\d{3}-\d{2}-\d{5}"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<!-- ### Target Object ###-->
+	<!-- Card Relation -->
+	<xs:complexType name="CardType">
+		<xs:annotation>
+			<xs:documentation>카드 정보</xs:documentation>
+			<xs:documentation>카드정보 Object로 이상금융거래 중 카드 정보가 필요할 경우 SFIX의 Target 계층에서 사용됩니다.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="Name" type="xs:string" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>카드 사용자 이름을 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Card_Type" type="object:CardCategoryType" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>신용카드, 직불카드 등의 카드 유형을 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Card_Number" type="object:CardNumberType" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>신용카드 번호를 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Organization_Code" type="organization:OrganizationCodeType" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>신용카드 발급 금융회사로 금융회사 코드를 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Issue_Date" type="xs:dateTime" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>신용카드 발급일을 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="CardTransactionType">
+		<xs:annotation>
+			<xs:documentation>카드거래 정보</xs:documentation>
+			<xs:documentation>카드거래정보 Object로 이상금융거래 중 카드 사용 정보가 필요할 경우 SFIX의 Target 계층에서 사용됩니다.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="Name" type="xs:string" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>카드 사용자 이름을 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Card_Type" type="object:CardCategoryType" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>신용카드, 직불카드 등의 카드 유형을 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Card_Number" type="object:CardNumberType" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>신용카드 번호를 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Organization_Code" type="organization:OrganizationCodeType" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>신용카드 발급 금융회사로 금융회사 코드를 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Transaction_Type" type="object:CardTransactionCategoryType" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>입금, 출금, 현금서비스, 카드론 등 신용카드 사용(거래) 유형을 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Use_Type" type="object:CardUseType" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>CD/ATM, 가맹점, 인터넷 등 신용카드 사용자를 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Transaction_Country" type="object:CountryType" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>카드 사용 국가를 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Transaction_Location" type="xs:string" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>카드 사용 장소를 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Transaction_Money" type="xs:integer" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>카드 사용금액을 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Transaction_Date" type="xs:dateTime" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>카드 사용일을 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:simpleType name="CardCategoryType">
+		<xs:annotation>
+			<xs:documentation>카드의 유형을 나타내는 정보입니다. 카드유형을 정의할 때 사용됩니다.</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="체크카드">
+				<xs:annotation>
+					<xs:documentation>체크카드일 경우 선택합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="신용카드">
+				<xs:annotation>
+					<xs:documentation>신용카드일 경우 선택합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="직불카드">
+				<xs:annotation>
+					<xs:documentation>직불카드일 경우 선택합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="CardTransactionCategoryType">
+		<xs:annotation>
+			<xs:documentation>카드거래의 유형을 나타내는 정보입니다.</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="입금">
+				<xs:annotation>
+					<xs:documentation>입금일 경우 선택합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="출금">
+				<xs:annotation>
+					<xs:documentation>출금일 경우 선택합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="현금서비스">
+				<xs:annotation>
+					<xs:documentation>현금서비스일 경우 선택합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="카드론">
+				<xs:annotation>
+					<xs:documentation>카드론일 경우 선택합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="CardUseType">
+		<xs:annotation>
+			<xs:documentation>카드의 사용처 정보를 나타내는 정보입니다.</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="CD/ATM">
+				<xs:annotation>
+					<xs:documentation>CD/ATM에서 사용한 경우 선택합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="가맹점">
+				<xs:annotation>
+					<xs:documentation>카드 가맹점에서 사용한 경우 선택합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="인터넷">
+				<xs:annotation>
+					<xs:documentation>인터넷 가맹점에서 사용한 경우 선택합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<!-- PKI Relation -->
+	<xs:complexType name="PKIType">
+		<xs:annotation>
+			<xs:documentation>공인인증서 정보</xs:documentation>
+			<xs:documentation>인증서정보 Object로 이상금융거래 중 인증서 부정발급 정보가 필요할 경우 SFIX의 Target 계층에서 사용됩니다.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="Name" type="xs:string" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>인증서 사용자 이름을 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Organization_Code" type="organization:OrganizationCodeType" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>인증서 발급 금융회사로 금융회사 코드를 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="PKI_Type" type="object:PKICategoryType" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>인증서 종류를 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="DN" type="xs:string" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>인증서 DN값을 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Registration_Date" type="xs:dateTime" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>인증서 발급일을 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Renewing_Date" type="xs:dateTime" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>인증서 갱신일을 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Revocation_Date" type="xs:dateTime" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>인증서 폐지일을 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:simpleType name="PKICategoryType">
+		<xs:annotation>
+			<xs:documentation>인증서 종류를 나타내는 정보입니다.</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="은행/보험용 개인">
+				<xs:annotation>
+					<xs:documentation>은행/보험용 개인 용도의 인증서일 경우 선택합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="증권용 개인">
+				<xs:annotation>
+					<xs:documentation>증권용 개인 용도의 인증서일 경우 선택합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="전자거래범용 개인">
+				<xs:annotation>
+					<xs:documentation>전자거래범용 개인 용도의 인증서일 경우 선택합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="전자거래범용 법인">
+				<xs:annotation>
+					<xs:documentation>전자거래범용 법인 용도의 인증서일 경우 선택합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<!-- Bank / Stock Relation -->
+	<xs:complexType name="AccountType">
+		<xs:annotation>
+			<xs:documentation>은행/증권 계좌 정보</xs:documentation>
+			<xs:documentation>계좌정보 Object로 이상금융거래 중 대포통장 등과 같은 금융계좌 정보가 필요할 경우 SFIX의 Target 계층에서 사용됩니다.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="Name" type="xs:string" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>금융계좌 명의인 이름을 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Account_Number" type="object:AccountNumberType">
+				<xs:annotation>
+					<xs:documentation>명의인의 계좌번호를 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Organization_Code" type="organization:OrganizationCodeType" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>계좌 발급 금융회사로 금융회사 코드를 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Issue_Date" type="xs:dateTime" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>계좌 발급일을 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="AccountTransactionType">
+		<xs:annotation>
+			<xs:documentation>은행/증권 금융거래 정보</xs:documentation>
+			<xs:documentation>금융거래정보 Object로 이상금융거래 중 입금, 출금, 이체 등과 같은 금융거래정보가 필요할 경우 SFIX의 Target 계층에서 사용됩니다.</xs:documentation>
+			<xs:documentation>* 금융거래 종류에서 입금정보는 Deposit 관련 필드를 사용합니다.</xs:documentation>
+			<xs:documentation>* 금융거래 종류에서 출금정보는 Withdrawal 관련 필드를 사용합니다.</xs:documentation>
+			<xs:documentation>* 금융거래 종류에서 이체정보는 Deposit과 Withdrawal 관련 필드를 모두 사용합니다.</xs:documentation>
+			<xs:documentation>* 금융거래 종류에서 대출정보는 Deposit 관련 필드를 모두 사용합니다.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="Transaction_Type" type="object:AccountTransactionCategoryType" minOccurs="1" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>입금, 출금, 이체, 대출 등의 금융거래 종류를 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Withdrawal_Name" type="xs:string" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>출금인 이름을 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Withdrawal_Account_Number" type="object:AccountNumberType" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>출금 계좌번호를 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Withdrawal_Organization_Code" type="organization:OrganizationCodeType" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>출금 계좌의 금융회사로 금융회사 코드를 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Withdrawal_Money" type="xs:integer" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>출금 금액을 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Withdrawal_Date" type="xs:dateTime" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>출금일을 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Deposit_Name" type="xs:string" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>입금인 이름을 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Deposit_Account_Number" type="object:AccountNumberType" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>입금 계좌번호를 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Deposit_Organization_Code" type="organization:OrganizationCodeType" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>입금 계좌의 금융회사로 금융회사 코드를 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Deposit_Money" type="xs:integer" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>입금 금액을 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Deposit_Date" type="xs:dateTime" minOccurs="0" maxOccurs="1">
+				<xs:annotation>
+					<xs:documentation>입금일을 의미합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:simpleType name="AccountTransactionCategoryType">
+		<xs:annotation>
+			<xs:documentation>금융거래 유형을 나타내는 정보입니다.</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="입금">
+				<xs:annotation>
+					<xs:documentation>금융거래 유형이 입금일 경우 선택합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="출금">
+				<xs:annotation>
+					<xs:documentation>금융거래 유형이 출금일 경우 선택합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="이체">
+				<xs:annotation>
+					<xs:documentation>금융거래 유형이 이체일 경우 선택합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="대출">
+				<xs:annotation>
+					<xs:documentation>금융거래 유형이 대출일 경우 선택합니다.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<!-- Common Type in Object -->
+	<xs:simpleType name="GenderType">
+		<xs:annotation>
+			<xs:documentation>사람의 성별을 나타내는 정보입니다.</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="남자"/>
+			<xs:enumeration value="여자"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="NationalityType">
+		<xs:annotation>
+			<xs:documentation>내국인, 외국인 구분을 나타내는 정보입니다.</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="내국인"/>
+			<xs:enumeration value="외국인"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="AccountNumberType">
+		<xs:annotation>
+			<xs:documentation>은행/증권 계좌 번호 타입</xs:documentation>
+			<xs:documentation>은행/증권별로 계좌번호가 형태가 달라 숫자와 -으로 표현</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:pattern value="[0-9][0-9-]+"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="CardNumberType">
+		<xs:annotation>
+			<xs:documentation>카드번호 타입</xs:documentation>
+			<xs:documentation>범용성 있게 XXXX-XXXX-XXXX-XXXX 로 표현</xs:documentation>
+			<xs:documentation>카드번호를 나타내는 정보입니다.</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:pattern value="[1-9][0-9]{3}-[0-9]{4}-[0-9]{4}-[0-9]{4}"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="CellphoneNumberType">
+		<xs:annotation>
+			<xs:documentation>대한민국 핸드폰 번호 타입</xs:documentation>
+			<xs:documentation>XXX-XXXX-XXXX 형태로 숫자와 -으로 표현</xs:documentation>
+			<xs:documentation>스마트폰 또는 테블릿 디바이스의 휴대폰 번호를 나타내는 정보입니다.</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:pattern value="\d{3}-\d{3,4}-\d{4}"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="TelephoneNumberType">
+		<xs:annotation>
+			<xs:documentation>대한민국 전화번호 타입</xs:documentation>
+			<xs:documentation>XXX-XXXX-XXXX 형태로 숫자와 -으로 표현</xs:documentation>
+			<xs:documentation>전화번호를 나타내는 정보입니다.</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:pattern value="\d{2,3}-\d{3,4}-\d{4}"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="IpAddressType">
+		<xs:annotation>
+			<xs:documentation>IPv4 IP주소 타입</xs:documentation>
+			<xs:documentation>IP주소를 나타내는 정보로 IPv4 주소 기반으로 되어 있습니다. IP주소는 개별 IP주소와 CIDR 형태의 클래스 단위의 주소를 허용하고 있습니다.</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:pattern value="((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]?|0)\.){3}(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]?|0)">
+				<xs:annotation>
+					<xs:documentation>개별 IP주소 정규식 패턴</xs:documentation>
+				</xs:annotation>
+			</xs:pattern>
+			<xs:pattern value="((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]?|0)\.){3}(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]?|0)/((3[0-2]|[12][0-9]|[1-9]))">
+				<xs:annotation>
+					<xs:documentation>CIDR 형태의 클래스 단위 주소 패턴</xs:documentation>
+				</xs:annotation>
+			</xs:pattern>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="MacAddressType">
+		<xs:annotation>
+			<xs:documentation>개별 MAC주소를 나타내는 정보로 IPv4 주소 기반으로 되어 있습니다.</xs:documentation>
+			<xs:documentation>IPv4 Mac주소 타입</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:pattern value="([0-9a-fA-F][0-9a-fA-F]:){5}([0-9a-fA-F][0-9a-fA-F])"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="OperatingSystemType">
+		<xs:annotation>
+			<xs:documentation>운영체제 정보 타입</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:pattern value="([a-zA-Z0-9 _.'!@#$%^*()_+={}|/:;,\\'~]+)"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="BrowserType">
+		<xs:annotation>
+			<xs:documentation>브라우저 정보 타입</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:pattern value="([a-zA-Z0-9 _.'!@#$%^*()_+={}|/:;,\\'~]+)"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="CountryType">
+		<xs:annotation>
+			<xs:documentation>국가 코드를 나타내는 정보입니다. 국가코드는 ISO 3166-1 alpha-2 주소체계를 사용합니다.</xs:documentation>
+			<xs:documentation>ISO3166 alpha-2 국가 타입</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:pattern value="([a-zA-Z][a-zA-Z])"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="LocaleLanguageType">
+		<xs:annotation>
+			<xs:documentation>스마트폰 또는 테블릿 디바이스에 설정된 언어 ID를 나타내는 정보입니다. 스마트폰 또는 테블릿 디바이스의 운영체제 환경에 따라 언어 ID가 다르게 표기됩니다.</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:pattern value="([a-zA-Z_-]+)"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="LocaleCountryType">
+		<xs:annotation>
+			<xs:documentation>스마트폰 또는 테블릿 디바이스에 설정된 국가 ID를 나타내는 정보입니다. 스마트폰 또는 태블릿 디바이스의 운영체제 환경에 따라 국가 ID가 다르게 표기됩니다. </xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:pattern value="([a-zA-Z]+)"/>
+		</xs:restriction>
+	</xs:simpleType>
+</xs:schema>
